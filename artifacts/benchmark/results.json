@@ -1,0 +1,357 @@
+[
+  {
+    "mode": "baseline",
+    "backend": "webgl",
+    "input": {
+      "width": 1920,
+      "height": 1080,
+      "durationSeconds": 20.29424
+    },
+    "detectorInput": {
+      "width": 1920,
+      "height": 1080
+    },
+    "loadMs": 492.80000000074506,
+    "frames": 100,
+    "elapsedMs": 20033.299999998882,
+    "fps": 4.991688838084867,
+    "inferenceMedianMs": 32.90000000037253,
+    "inferenceP95Ms": 35.90000000037253,
+    "processingMedianMs": 36.69999999925494,
+    "processingP95Ms": 40.09999999962747,
+    "cycleP95Ms": 206.5,
+    "framesOver250Ms": 0,
+    "framesOver2500Ms": 0,
+    "framesWithVehicles": 39,
+    "meanVehicles": 0.43,
+    "tensorsBefore": 262,
+    "tensorsAfter": 262,
+    "renderer": "native-video",
+    "samples": [
+      {
+        "time": 1.26839,
+        "capturedTime": 1.312732,
+        "objects": [
+          {
+            "label": "car",
+            "score": 0.8468082547187805,
+            "box": [
+              -0.003895968198776245,
+              0.3477851152420044,
+              0.35333019495010376,
+              0.19428163766860962
+            ]
+          },
+          {
+            "label": "car",
+            "score": 0.5136197209358215,
+            "box": [
+              0.7782310247421265,
+              0.4479181468486786,
+              0.06019032001495361,
+              0.028826594352722168
+            ]
+          }
+        ]
+      },
+      {
+        "time": 3.8051699999999995,
+        "capturedTime": 3.836657,
+        "objects": [
+          {
+            "label": "car",
+            "score": 0.672044038772583,
+            "box": [
+              0.3887206017971039,
+              0.33984842896461487,
+              0.26000943779945374,
+              0.21021386981010437
+            ]
+          }
+        ]
+      },
+      {
+        "time": 6.34195,
+        "capturedTime": 6.375935,
+        "objects": []
+      },
+      {
+        "time": 8.87873,
+        "capturedTime": 8.925617,
+        "objects": []
+      },
+      {
+        "time": 11.41551,
+        "capturedTime": 11.435901,
+        "objects": []
+      },
+      {
+        "time": 13.95229,
+        "capturedTime": 13.968212,
+        "objects": []
+      },
+      {
+        "time": 16.489069999999998,
+        "capturedTime": 16.523406,
+        "objects": []
+      },
+      {
+        "time": 19.02585,
+        "capturedTime": 19.051922,
+        "objects": []
+      }
+    ],
+    "hardware": {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+      "gpu": true,
+      "adapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "description": "",
+        "isFallbackAdapter": false
+      }
+    },
+    "warnings": [
+      "Blocked call to navigator.vibrate because user hasn't tapped on the frame or any embedded frame yet: https://www.chromestatus.com/feature/5644273861001216.",
+      "Blocked call to navigator.vibrate because user hasn't tapped on the frame or any embedded frame yet: https://www.chromestatus.com/feature/5644273861001216."
+    ]
+  },
+  {
+    "mode": "webgl",
+    "backend": "webgl",
+    "input": {
+      "width": 1920,
+      "height": 1080,
+      "durationSeconds": 20.29424
+    },
+    "detectorInput": {
+      "width": 533,
+      "height": 300
+    },
+    "loadMs": 599.0999999996275,
+    "frames": 451,
+    "elapsedMs": 20027.5,
+    "fps": 22.51903632505305,
+    "inferenceMedianMs": 24.199999999254942,
+    "inferenceP95Ms": 25.59999999962747,
+    "processingMedianMs": 26,
+    "processingP95Ms": 27.5,
+    "cycleP95Ms": 68.09999999962747,
+    "framesOver250Ms": 0,
+    "framesOver2500Ms": 0,
+    "framesWithVehicles": 211,
+    "meanVehicles": 0.549889135254989,
+    "tensorsBefore": 262,
+    "tensorsAfter": 262,
+    "renderer": "three-webgpu",
+    "renderedFrames": "611",
+    "samples": [
+      {
+        "time": 1.26839,
+        "capturedTime": 1.339412,
+        "objects": [
+          {
+            "label": "car",
+            "score": 0.8598244190216064,
+            "box": [
+              -0.005538523197174072,
+              0.3455508351325989,
+              0.3492998778820038,
+              0.19521504640579224
+            ]
+          }
+        ]
+      },
+      {
+        "time": 3.8051699999999995,
+        "capturedTime": 3.810853,
+        "objects": [
+          {
+            "label": "car",
+            "score": 0.6958329081535339,
+            "box": [
+              0.41638052463531494,
+              0.33654454350471497,
+              0.26539361476898193,
+              0.2124967873096466
+            ]
+          }
+        ]
+      },
+      {
+        "time": 6.34195,
+        "capturedTime": 6.346035,
+        "objects": []
+      },
+      {
+        "time": 8.87873,
+        "capturedTime": 8.880654,
+        "objects": []
+      },
+      {
+        "time": 11.41551,
+        "capturedTime": 11.434817,
+        "objects": [
+          {
+            "label": "car",
+            "score": 0.5330792665481567,
+            "box": [
+              0.7882776856422424,
+              0.4332082271575928,
+              0.062194108963012695,
+              0.03328835964202881
+            ]
+          }
+        ]
+      },
+      {
+        "time": 13.95229,
+        "capturedTime": 13.966758,
+        "objects": []
+      },
+      {
+        "time": 16.489069999999998,
+        "capturedTime": 16.498622,
+        "objects": []
+      },
+      {
+        "time": 19.02585,
+        "capturedTime": 19.03527,
+        "objects": []
+      }
+    ],
+    "hardware": {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+      "gpu": true,
+      "adapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "description": "",
+        "isFallbackAdapter": false
+      }
+    },
+    "warnings": [
+      "Blocked call to navigator.vibrate because user hasn't tapped on the frame or any embedded frame yet: https://www.chromestatus.com/feature/5644273861001216.",
+      "Blocked call to navigator.vibrate because user hasn't tapped on the frame or any embedded frame yet: https://www.chromestatus.com/feature/5644273861001216."
+    ]
+  },
+  {
+    "mode": "webgpu",
+    "backend": "webgpu",
+    "input": {
+      "width": 1920,
+      "height": 1080,
+      "durationSeconds": 20.29424
+    },
+    "detectorInput": {
+      "width": 533,
+      "height": 300
+    },
+    "loadMs": 116,
+    "frames": 600,
+    "elapsedMs": 20030.199999999255,
+    "fps": 29.954768299868316,
+    "inferenceMedianMs": 11.199999999254942,
+    "inferenceP95Ms": 12,
+    "processingMedianMs": 12.899999998509884,
+    "processingP95Ms": 14.199999999254942,
+    "cycleP95Ms": 51.09999999962747,
+    "framesOver250Ms": 0,
+    "framesOver2500Ms": 0,
+    "framesWithVehicles": 277,
+    "meanVehicles": 0.5333333333333333,
+    "tensorsBefore": 262,
+    "tensorsAfter": 262,
+    "renderer": "three-webgpu",
+    "renderedFrames": "610",
+    "samples": [
+      {
+        "time": 1.26839,
+        "capturedTime": 1.28839,
+        "objects": [
+          {
+            "label": "car",
+            "score": 0.8904421329498291,
+            "box": [
+              0.014801651239395142,
+              0.34328100085258484,
+              0.3612675070762634,
+              0.20155838131904602
+            ]
+          }
+        ]
+      },
+      {
+        "time": 3.8051699999999995,
+        "capturedTime": 3.823236,
+        "objects": [
+          {
+            "label": "car",
+            "score": 0.6958324909210205,
+            "box": [
+              0.41638052463531494,
+              0.33654454350471497,
+              0.2653937339782715,
+              0.21249684691429138
+            ]
+          }
+        ]
+      },
+      {
+        "time": 6.34195,
+        "capturedTime": 6.346565,
+        "objects": []
+      },
+      {
+        "time": 8.87873,
+        "capturedTime": 8.89873,
+        "objects": []
+      },
+      {
+        "time": 11.41551,
+        "capturedTime": 11.426978,
+        "objects": [
+          {
+            "label": "car",
+            "score": 0.5330830812454224,
+            "box": [
+              0.7882778644561768,
+              0.43320855498313904,
+              0.062193989753723145,
+              0.03328812122344971
+            ]
+          }
+        ]
+      },
+      {
+        "time": 13.95229,
+        "capturedTime": 13.96811,
+        "objects": []
+      },
+      {
+        "time": 16.489069999999998,
+        "capturedTime": 16.501069,
+        "objects": []
+      },
+      {
+        "time": 19.02585,
+        "capturedTime": 19.044602,
+        "objects": []
+      }
+    ],
+    "hardware": {
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36",
+      "gpu": true,
+      "adapter": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "description": "",
+        "isFallbackAdapter": false
+      }
+    },
+    "warnings": [
+      "Blocked call to navigator.vibrate because user hasn't tapped on the frame or any embedded frame yet: https://www.chromestatus.com/feature/5644273861001216.",
+      "Blocked call to navigator.vibrate because user hasn't tapped on the frame or any embedded frame yet: https://www.chromestatus.com/feature/5644273861001216."
+    ]
+  }
+]

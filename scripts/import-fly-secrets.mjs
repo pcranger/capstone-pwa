@@ -1,0 +1,13 @@
+import {readFileSync} from 'node:fs';
+import {spawn} from 'node:child_process';
+const source=process.argv[2]??'../capstone_android/.env';
+const line=readFileSync(source,'utf8').split('\n').find(l=>/^GOOGLE_MAP_API_KEY\s*=/.test(l));
+if(!line)throw new Error('GOOGLE_MAP_API_KEY is missing from the selected native environment file.');
+const key=line.slice(line.indexOf('=')+1).trim().replace(/^['"]|['"]$/g,'');
+if(!key)throw new Error('GOOGLE_MAP_API_KEY is empty.');
+const child=spawn('fly',['secrets','import','--stage','--app','capstone-pwa'],{stdio:['pipe','pipe','pipe']});
+for(const stream of [child.stdout,child.stderr])stream.on('data',data=>process.stdout.write(String(data).replaceAll(key,'[REDACTED]')));
+const publicMap=process.argv.includes('--public-map');
+child.stdin.end('GOOGLE_MAP_API_KEY='+key+'\n'+(publicMap?'GOOGLE_MAPS_BROWSER_KEY='+key+'\n':''));
+child.on('error',()=>{console.error('Could not start Fly CLI.');process.exitCode=1;});
+child.on('exit',code=>{process.exitCode=code??1;});

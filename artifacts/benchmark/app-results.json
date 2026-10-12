@@ -1,0 +1,108 @@
+{
+  "seconds": 20,
+  "readings": [
+    {
+      "fps": 30,
+      "inferenceMs": 10,
+      "tracks": 0
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 10,
+      "tracks": 5
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 11,
+      "tracks": 5
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 11,
+      "tracks": 1
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 11,
+      "tracks": 5
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 11,
+      "tracks": 4
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 10,
+      "tracks": 2
+    },
+    {
+      "fps": 29,
+      "inferenceMs": 11,
+      "tracks": 4
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 11,
+      "tracks": 3
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 11,
+      "tracks": 3
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 10,
+      "tracks": 2
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 11,
+      "tracks": 3
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 10,
+      "tracks": 2
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 11,
+      "tracks": 3
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 11,
+      "tracks": 4
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 10,
+      "tracks": 4
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 10,
+      "tracks": 3
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 11,
+      "tracks": 2
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 10,
+      "tracks": 2
+    },
+    {
+      "fps": 30,
+      "inferenceMs": 11,
+      "tracks": 2
+    }
+  ],
+  "errors": [],
+  "renderer": "three-webgpu",
+  "renderedFrames": 623
+}

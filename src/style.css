@@ -1,0 +1,74 @@
+@font-face {
+  font-family: "Inter-Regular";
+  src: url("/fonts/inter_regular.ttf");
+}
+@font-face {
+  font-family: "Inter-Bold";
+  src: url("/fonts/inter_bold.ttf");
+}
+@font-face {
+  font-family: "Tinos-Regular";
+  src: url("/fonts/tinos_regular.ttf");
+}
+@font-face {
+  font-family: "Tinos-Bold";
+  src: url("/fonts/tinos_bold.ttf");
+}
+@font-face {
+  font-family: "AtkinsonHyperlegible-Regular";
+  src: url("/fonts/atkinson_regular.ttf");
+}
+@font-face {
+  font-family: "AtkinsonHyperlegible-Bold";
+  src: url("/fonts/atkinson_bold.ttf");
+}
+@font-face {
+  font-family: MaterialIcons;
+  src: url("/fonts/MaterialIcons.ttf");
+}
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  margin: 0;
+  overflow: hidden;
+  background: #0b0f12;
+}
+#root {
+  display: flex;
+  flex-direction: column;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  box-sizing: border-box;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+input {
+  font: inherit;
+}
+video {
+  display: block;
+}
+a {
+  color: #8ab4f8;
+}
+input:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible {
+  outline: 2px solid #8ab4f8;
+  outline-offset: -2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    animation: none !important;
+  }
+}
