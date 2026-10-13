@@ -1,0 +1,22 @@
+{
+  "id": "06-narellan",
+  "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\a-traffic-light-with-a-stop-sign-and-pedestrian-crossing-sign-in-narellan-new-south-wales-2HBWNP2.jpg",
+  "input_sha256": "8ee2d7de97ea1503b27874883e42bd3245ed1ddef92a61188ede3018fc556729",
+  "observations": [
+    {
+      "id": "model-156944",
+      "kind": "signal",
+      "box": {
+        "left": 0.3685036566024436,
+        "top": 0.19771571159362794,
+        "right": 0.46832887271890666,
+        "bottom": 0.3333646297454834
+      },
+      "phase": "GREEN",
+      "score": 0.8055651469907872,
+      "source": "pretrained"
+    }
+  ],
+  "policy": "Green pedestrian symbol observed. Crossing safety and remaining time are unverified.",
+  "errors": []
+}

@@ -1,0 +1,22 @@
+{
+  "id": "05-upgrade",
+  "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\traffic-signal-ugrade.jpg",
+  "input_sha256": "dd8599234d8d6265865f9b177d6e42ee443e88255b65cf80fba59d67557f3769",
+  "observations": [
+    {
+      "id": "model-157592",
+      "kind": "signal",
+      "box": {
+        "left": 0.41320792011831,
+        "top": 0.25126022696495054,
+        "right": 0.5100307596140894,
+        "bottom": 0.37500267624855044
+      },
+      "phase": "GREEN",
+      "score": 0.5248319401491557,
+      "source": "pretrained"
+    }
+  ],
+  "policy": "Green pedestrian symbol observed. Crossing safety and remaining time are unverified.",
+  "errors": []
+}

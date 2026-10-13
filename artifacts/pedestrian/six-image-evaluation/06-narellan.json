@@ -1,0 +1,47 @@
+{
+  "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\a-traffic-light-with-a-stop-sign-and-pedestrian-crossing-sign-in-narellan-new-south-wales-2HBWNP2.jpg",
+  "input_sha256": "8ee2d7de97ea1503b27874883e42bd3245ed1ddef92a61188ede3018fc556729",
+  "image_size": [
+    866,
+    1390
+  ],
+  "model_sha256": "96437c2080a0ba5364f438b41c8551e310e9761cf998c74856d42b748d357b42",
+  "input_tensor": [
+    1,
+    3,
+    640,
+    640
+  ],
+  "confidence_threshold": 0.35,
+  "detections": [
+    {
+      "class": "G_Signal",
+      "confidence": 0.7894155979156494,
+      "box_xyxy": [
+        319.3783874511719,
+        274.1531982421875,
+        404.9637145996094,
+        463.881103515625
+      ],
+      "box_normalized": [
+        0.36879721414684974,
+        0.1972325167209982,
+        0.46762553648915633,
+        0.33372741260116906
+      ],
+      "source": "pretrained ONNX model only"
+    }
+  ],
+  "timing": {
+    "native_CPU_single_thread_median_ms": 182.77569999918342,
+    "samples_ms": [
+      172.36319999210536,
+      169.79559999890625,
+      182.77569999918342,
+      206.13830001093447,
+      185.35180005710572
+    ],
+    "note": "Desktop native ONNX inference only; excludes preprocessing and is not browser/mobile performance."
+  },
+  "limitations": "No shape fallback, countdown reader or button heuristics in this raw-model evaluation. One image does not establish Australian road accuracy."
+}

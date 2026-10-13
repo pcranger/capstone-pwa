@@ -26,4 +26,6 @@ The exact attachment ending `84746c96-d4ef-42ae-b16e-ffc651adcc5c.png` was rerun
 
 ## Before merging
 
+The subsequent [six-image evaluation](artifacts/pedestrian/six-image-evaluation/REPORT.md) found three false green predictions on vehicle lights and a false foliage countdown in the actual app pipeline. These remain unfixed and strengthen the reason to keep the work isolated. The report and annotated outputs preserve both the successful pedestrian detections and these failures.
+
 Review the experiment branch and repeat the integration tests on the intended destination branch. This branch is based on the focused demo, so a merge into an older `main` also includes the earlier demo-scope changes. Cherry-picking `31de9ed` onto another base is an alternative when only the pedestrian feature is wanted; resolve integration conflicts and rerun tests. New experiment-only evaluation commits can be reviewed independently. Do not deploy or merge until the owner is satisfied.
