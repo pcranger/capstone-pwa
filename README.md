@@ -1,84 +1,66 @@
-# capstone_PWA
+# CrossWise PWA
 
-Phone PWA rebuilt from the current `capstone_android` CrossWise screens. The UI reuses the native Journey, camera controls, Settings, Guide, Practice, destination drawer, typography, colours, icons and wording through React Native Web. There is no desktop dashboard, landing page, extra navigation, install card or synthetic practice interface.
+CrossWise now has an Eye Navi-inspired Home, dedicated settings, Home/destination management, route review, walking tools, custom routes, recording and optional cloud tools. The existing detector, renderer, manual crossing controls and developer tools are retained. Unsupported model categories and device services are identified in the interface.
 
-## Run
+## Run locally
+
+From this project directory:
 
 ```sh
-cd /Users/hieu/Desktop/capstone/capstone_PWA
 npm ci
 npm run build
-npm run preview -- --port 4174
+npm start
 ```
 
-Open http://localhost:4174 locally. Serve `dist/` at the root of an HTTPS host for phone camera access and installation. `npm run dev` starts development; the service worker is enabled in production builds.
+Open http://localhost:8080. The Node server serves the UI and configured APIs. Development and static preview use `npm run dev` or `npm run preview` (default port 4173); preview alone does not supply account/map APIs. Production camera, location and accounts require HTTPS; localhost works for development. These commands do not deploy.
 
-## Original phone flow
+## Main flows
 
-- Camera opens automatically after permission. Voice and Settings sit at the top; More controls and the map arrow sit at the bottom.
-- More controls reveals Start camera assistance. Once detection is available, start assistance, then select I’m crossing. I’m on the footpath stays reachable with controls collapsed. Completion is explicit.
-- The bottom arrow opens the full-screen map and destination drawer. The handle expands/collapses it; inward arrows return to the camera.
-- Settings opens over the mounted camera. Guide and Practice return to Settings. Browser Back follows screen and drawer history; Escape provides the native Back action.
-- Practice plays the actual cue vocabulary and offers a separate microphone check. It does not fabricate detections or change crossing progress.
-- User/Developer mode, feedback, thresholds, visibility and other settings persist on this browser. The Developer session logger exports local CSV files containing counts and crossing state, without images or GPS coordinates.
+- Home → Route guidance: Home-first destination picker, saved/recent destinations, search, coordinate capture, My Routes and Toolbox. Review the destination and route before starting.
+- Home → Stroll: existing camera/crossing UI with Home, Tools, Nearby and End walk. Camera access and nearby announcements start explicitly.
+- Settings → Home/Destinations: register by fresh GPS or address, name, review, edit an entrance by map/coordinate/nudges, delete and Undo. Existing saved places migrate to v2 while retaining the v1 migration record.
+- Settings: seven speech levels with preview/stop, five route preferences, twenty object-category rows, front/sides filter, nearby radii/genres, feedback/mono, startup, text size and permission status.
+- My Routes: author ordered points and spoken notes, reorder/Undo, duplicate, reverse into a reviewed draft, export/import and follow. Authored segments do not establish a walkable connection.
+- Recordings: shared-camera video, optional microphone, pause/resume, protection, rolling count/byte limits, playback/export/deletion. Five-minute/50-clip defaults depend on storage. Actual browser format is shown; MOV is not promised.
+- Monitoring: research accounts, expiring invitations accepted by another account, foreground location, manual/arrival check-ins, observer refresh and revocation. End walk stops this device's publishing; invitation revocation is separate.
+- Photo questions: shared-camera capture or file selection, review, explicit upload consent, question/follow-up, read/stop and stored-answer management. AI credentials and quota stay on the server.
+- Backup/Data management: reviewed validated exports/imports and scoped deletion. Videos export separately. Restore and broad data changes are blocked during navigation/crossing. Cloud and local data are separate.
+- Help/Advanced: holding guidance, cue/object practice, voice setup, privacy/feedback, existing detector/display/model status and CSV diagnostics.
 
-## Browser capabilities
+## Services and limits
 
-The camera preview is a flat Three.js scene using WebGPU where available, with WebGL 2 and direct-video fallbacks. iPhone/iPad previews use an oriented canvas texture to avoid the iOS external-video-texture rotation issue; source dimensions and cover cropping update when the camera orientation changes. The phone UI and map remain the original React Native Web components. The local COCO-SSD baseline runs through TensorFlow.js, preferring WebGPU, then WebGL, then CPU. Model initialization includes a real inference warmup before reporting readiness. It detects generic vehicles, people and traffic lights; it is not the native YOLO/TFLite model and cannot classify pedestrian walk/don’t-walk signals. Native model import and segmentation are unavailable. Detection reuses a canvas at a 300-pixel short edge, preserves aspect ratio, reads GPU outputs asynchronously and schedules the next inference on a fresh video frame. The former fixed 150 ms delay is removed. The original controls report unsupported native-model actions when used.
+Dev deployment: [capstone-pwa-dev.fly.dev](https://capstone-pwa-dev.fly.dev/). Use `fly.dev.toml` explicitly when updating dev; see [deployment record](docs/DEV_DEPLOYMENT.md). The existing `fly.toml` targets the older app.
 
-The shell, fonts, icons, Three.js renderer, detector backends and five model shards are precached after a successful first production load. Local inference and all local screens work offline; maps and online place/route services require connectivity. Browser storage eviction can remove cached files.
+Local tools work without an account. Maps use the existing same-origin Google Places/Routes proxy and server environment configuration. Browser map keys are intentionally public; private upstream credentials stay server-side.
 
-Speech uses installed browser/OS voices. Stereo tones reuse the native note sequences and panning; vibration reuses the original rhythms where supported. Voice recognition requires an available on-device English `SpeechRecognition` service; it reports failure with Retry/Voice help when unavailable and never switches to cloud recognition. The original command parser, conversational turn coordinator, saved places, route planner and journey logic are retained.
+Accounts, backup and sharing require `CROSSWISE_DATA_DIR`, an absolute private persistent directory. Photo questions additionally require `GEMINI_API_KEY`; `GEMINI_MODEL` selects an image-capable model. See [cloud setup](docs/CLOUD_TOOLS_SETUP.md) for exact configuration, retention, research-account limits and deployment requirements. Missing configuration has a visible unavailable state.
 
-The Fly deployment uses `GOOGLE_MAP_API_KEY` for same-origin Places and walking-route endpoints. At the owner’s explicit request, the same existing native key is also configured as `GOOGLE_MAPS_BROWSER_KEY` for the interactive public web map. That browser key is deliberately visible through `/api/config` and Google Maps requests. The native environment file itself is never copied into the PWA or Docker image. `GEMINI_API_KEY` is unused and is not deployed. Local static-only builds can use a browser key through `VITE_GOOGLE_MAPS_API_KEY`.
+The Docker image packages `dist/`, `server.mjs` and `server-advanced.mjs`. An existing Fly deployment is separate from these local changes. Cloud storage needs a persistent volume; this backend supports one Node process.
 
-## Fly deployment
+The existing COCO-SSD weights/inference are unchanged. Ordinary names map to Person, Bicycle, Car and Truck. The remaining sixteen Eye Navi rows show unsupported state and practice samples. Generic traffic-light detection does not classify pedestrian signals. Critical crossing/vehicle feedback is separate from ordinary switches.
 
-Live URL: https://capstone-pwa.fly.dev/
+Shortest distance/time rank returned walking alternatives. Fewer stairs, covered paths and main-road preferences require explicit standard-route fallback with the present provider. Reliable body-direction alignment, locked-screen tracking, Sony Quick Access/sensors, insurance and payments require external/native integration.
 
-App: `capstone-pwa`, personal organization, Sydney region, one shared CPU / 256 MB Machine, automatic stop/start, HTTPS. The Node server delivers static files and a bounded Google Places/Routes proxy. Camera/model inference still runs on the user's device.
+The service worker caches local screens, help, model shards, fonts and renderer after successful installation. Maps/nearby/cloud actions need online services. Backgrounding releases camera, stops voice input, pauses route/sharing and finalizes recording. Reload does not invent a recovered crossing. Export important local data before browser storage is cleared.
+
+## Verify
 
 ```sh
 npm run check
-# When updating the existing Google key (including the public map):
-node scripts/import-fly-secrets.mjs ../capstone_android/.env --public-map
-fly deploy --remote-only --ha=false --yes
-node scripts/smoke-deployment.mjs
 ```
 
-The Docker build includes only `dist/` and `server.mjs`. Environment files, sources, tests and dependencies are excluded. Keys are configured at runtime; rebuilding the public assets does not embed them. The configured browser map key is intentionally public through the runtime configuration. `sw.js`, HTML and runtime configuration revalidate on the server; configuration and API responses are not stored by the service worker.
+This runs TypeScript, lint, unit tests, production build, both server suites and browser workflows. Chrome is used for two Chromium profiles; install WebKit with `npx playwright install webkit` when needed. Automated tests use local fixtures/synthetic media and no real external-provider photos/locations.
 
-`npm start` runs the production server locally on port 8080. Fly imports are staged until the next deployment. The deployment smoke test uses a synthetic camera and a fixed Sydney test location to verify real Google services and offline screen loading.
+See [implementation status](docs/EYENAVI_IMPLEMENTATION_STATUS.md) for page coverage, results and remaining device/service checks. The plan, feature matrix, screen and voice specifications remain design/evidence records.
 
-Backgrounding releases the camera, stops listening and pauses route guidance. Returning reacquires the camera. An unfinished crossing remains explicit during the active page session; reload/OS termination does not restore crossing state. Camera assistance requires a fresh frame to start.
+## Code map
 
-## Validation
+- `src/product/`: shell, dedicated screens, speech scheduler, local/cloud tools.
+- `src/nav/`: planner/journey, v2 places, nearby reader and route preferences.
+- `src/ui/`: retained walking/camera, guide, practice and Advanced screens.
+- `src/state/controller.ts`: shared camera/crossing/navigation/voice integration.
+- `src/shared/`, `src/perception/`, `public/models/`: retained detection/crossing assets.
+- `server.mjs`, `server-advanced.mjs`: static hosting, map proxy and opt-in services.
+- `tests/`: unit, server and desktop/mobile browser verification.
 
-```sh
-npm run check
-npm audit --omit=dev
-```
-
-The browser suite uses installed Chrome and Playwright WebKit (`npx playwright install webkit` if needed). See [TEST_REPORT.md](TEST_REPORT.md) for results and physical-device limitations.
-
-## Implementation
-
-- `src/ui/`: original phone screen components; browser history and platform imports adapted.
-- `src/platform/`: browser camera, speech, maps, slider, storage, accessibility and CSV adapters.
-- `src/state/controller.ts`: browser integration with the original engine and navigation stores.
-- `src/nav/`, `src/voice/`: original destination, journey, bookmark, voice and speech logic.
-- `src/shared/`: platform-free crossing, tracking, optical-motion, hazard, signal and sensor logic.
-- `public/models/`, `public/fonts/`: self-hosted model and native font/icon assets.
-- `scripts/build-sw.mjs`: content-versioned offline cache.
-
-The original Android/iOS projects are unchanged. Third-party notices are in [THIRD_PARTY.md](THIRD_PARTY.md).
-
-## Video performance benchmark
-
-Run the local video benchmark against the Vite dev server (no video is included in the deployment):
-
-```sh
-BENCHMARK_BASE_URL=http://localhost:4175 node scripts/benchmark-video.mjs /absolute/path/to/video.mp4
-```
-
-Results and annotated frames are written to `artifacts/benchmark/`. The benchmark compares the original full-resolution COCO wrapper and 150 ms delay against optimized WebGL and WebGPU inference, including Three.js preview rendering. Chrome uses `--enable-unsafe-webgpu` during the benchmark; results record the actual adapter and backend. These measurements describe this host, not an iPhone or outdoor detection accuracy. `scripts/benchmark-app-video.mjs` also replays the video through the production app at localhost:4174 with active camera assistance.
+Third-party notices: [THIRD_PARTY.md](THIRD_PARTY.md).

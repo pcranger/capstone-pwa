@@ -2,6 +2,7 @@ import type { AppSettings } from "./settings/settings";
 import { renderTone } from "./feedback/toneSynth";
 import { HAPTIC_PATTERNS } from "./feedback/haptics";
 import { ToneKind, HapticPattern } from "./feedback/cue";
+import { productPreferences } from './product/preferences';
 type Settings = Pick<
   AppSettings,
   "speech" | "tones" | "haptics" | "speechRate"
@@ -107,7 +108,7 @@ export class Feedback {
     this.unlock();
     const a = this.audio;
     if (!a) return;
-    const [left, right] = renderTone(kind, pan, a.sampleRate);
+    const [left, right] = renderTone(kind, productPreferences.value.mono ? 0 : pan, a.sampleRate);
     const buffer = a.createBuffer(2, left.length, a.sampleRate);
     buffer.copyToChannel(left, 0);
     buffer.copyToChannel(right, 1);

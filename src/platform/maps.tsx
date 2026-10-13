@@ -130,22 +130,28 @@ export function Marker({
   description,
   onPress,
   pinColor,
+  draggable,
+  onDragEnd,
 }: {
   coordinate: GeoPoint;
   title?: string;
   description?: string;
   onPress?: () => void;
   pinColor?: string;
+  draggable?: boolean;
+  onDragEnd?: (point: GeoPoint) => void;
 }) {
   const map = useContext(MapContext),
     callback = useRef(onPress);
   callback.current = onPress;
+  const dragCallback = useRef(onDragEnd); dragCallback.current = onDragEnd;
   useEffect(() => {
     if (!map) return;
     const marker = new google.maps.Marker({
       map,
       position: point(coordinate),
       title,
+      draggable: draggable === true,
       icon: pinColor
         ? {
             path: google.maps.SymbolPath.CIRCLE,
@@ -158,6 +164,7 @@ export function Marker({
         : undefined,
     });
     marker.addListener("click", () => callback.current?.());
+    marker.addListener("dragend", (event: google.maps.MapMouseEvent) => { if (event.latLng) dragCallback.current?.({ latitude: event.latLng.lat(), longitude: event.latLng.lng() }); });
     return () => {
       marker.setMap(null);
     };
@@ -168,6 +175,7 @@ export function Marker({
     title,
     description,
     pinColor,
+    draggable,
   ]);
   return null;
 }

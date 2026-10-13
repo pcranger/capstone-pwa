@@ -2,4 +2,9 @@ node_modules/
 dist/
 playwright-report/
 test-results/
+test-results-*/
+cloud-test-results/
+*-build.log
+artifacts/*-build.log
 .env*
+cloud-*-results/

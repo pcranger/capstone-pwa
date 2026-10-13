@@ -1,15 +1,33 @@
 import { test, expect, type Page } from "@playwright/test";
-test.beforeEach(async ({ page }, info) => {
+test.beforeEach(async ({ page, browserName }, info) => {
+  // These regression cases exercise the retained walking UI with opt-in Stroll startup.
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('crosswise_product_preferences_v1'))
+      localStorage.setItem('crosswise_product_preferences_v1', JSON.stringify({version:1,autoStroll:true,termsVersion:'2026-10-13'}));
+  });
   if (!info.title.startsWith("live "))
     await page.addInitScript(() => {
       navigator.mediaDevices.getUserMedia = async () => {
         throw new DOMException("Denied", "NotAllowedError");
       };
     });
+  else if(browserName!=='webkit')await page.addInitScript(()=>{
+    // Keep the real camera pipeline/model/renderer while supplying actual animated
+    // browser MediaStream frames without the unreliable Windows capture service.
+    navigator.mediaDevices.getUserMedia=async()=>{
+      const canvas=document.createElement('canvas');canvas.width=640;canvas.height=360;
+      const context=canvas.getContext('2d')!;let frame=0;
+      const paint=()=>{context.fillStyle=frame++%2?'#164c79':'#4088b0';context.fillRect(0,0,canvas.width,canvas.height);context.fillStyle='#fff';context.fillText(`Live camera fixture ${frame}`,20,40);};
+      paint();setInterval(paint,50);return canvas.captureStream(20);
+    };
+  });
   await page.goto("/");
+  if(info.title.startsWith('live ')&&browserName!=='webkit')await allowCamera(page);
 });
+async function allowCamera(page:Page){await page.getByRole('button',{name:'Allow camera',exact:true}).click();}
 async function settings(page: Page) {
   await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole('button', {name:'Advanced',exact:false}).click();
 }
 async function noOverflow(page: Page) {
   expect(
@@ -18,7 +36,7 @@ async function noOverflow(page: Page) {
     ),
   ).toBe(true);
 }
-test("phone home has only the original collapsed camera controls", async ({
+test("configured Stroll retains the original collapsed camera controls", async ({
   page,
 }) => {
   await expect(
@@ -81,6 +99,7 @@ test("settings preserves the original sections and collapsed disclosures", async
   await expect(precautions).toHaveAttribute("aria-expanded", "true");
   await precautions.click();
   await page.getByRole("button", { name: "Back", exact: true }).click();
+  await page.getByRole('button', {name:'‹ Back',exact:true}).click();
   await expect(
     page.getByRole("button", { name: "Settings", exact: true }),
   ).toBeVisible();
@@ -111,6 +130,7 @@ test("guide and practice return to Settings and keep home controls intact", asyn
     .getByRole("button", { name: "Back to Settings", exact: true })
     .click();
   await page.getByRole("button", { name: "Back", exact: true }).click();
+  await page.getByRole('button', {name:'‹ Back',exact:true}).click();
   await expect(
     page.getByRole("button", { name: "Hide controls", exact: true }),
   ).toBeVisible();
@@ -120,6 +140,8 @@ test("phone Back follows the screen hierarchy", async ({ page }) => {
   await page
     .getByRole("button", { name: "Practice the cues", exact: true })
     .click();
+  await page.goBack();
+  await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeVisible();
   await page.goBack();
   await expect(
     page.getByRole("heading", { name: "Settings", exact: true }),
@@ -327,6 +349,7 @@ test("live camera runs local detection and preserves crossing through overlays",
   const video = await page.locator("video").evaluateHandle((v) => v);
   await settings(page);
   await page.getByRole("button", { name: "Back", exact: true }).click();
+  await page.getByRole('button', {name:'‹ Back',exact:true}).click();
   expect(
     await page
       .locator("video")
@@ -368,6 +391,7 @@ test("live offline camera inference reloads from the PWA cache", async ({
   });
   await context.setOffline(true);
   await page.reload();
+  await allowCamera(page);
   await page
     .getByRole("button", { name: "More controls", exact: true })
     .click();
@@ -438,6 +462,7 @@ test.describe("model download recovery", () => {
       r.fulfill({ status: 503, body: "Unavailable" }),
     );
     await page.reload();
+    await allowCamera(page);
     await expect(
       page.getByRole("button", { name: "Retry camera", exact: true }),
     ).toBeVisible({ timeout: 30000 });
@@ -475,14 +500,27 @@ test.describe("model download recovery", () => {
 test.describe('configured route integration',()=>{
  test.use({serviceWorkers:'block'});
  test('configured route starts without drawer close cancelling it, then pauses and resumes',async({page})=>{
+ await page.context().grantPermissions(['geolocation']);await page.context().setGeolocation({latitude:-33.8731,longitude:151.2065,accuracy:5});
  await page.route('**/api/config',r=>r.fulfill({json:{mapsProxyEnabled:true,mapsBrowserKey:''}}));
  await page.route('**/api/maps/search',r=>r.fulfill({json:{places:[{id:'test-library',displayName:{text:'Test Library'},formattedAddress:'Sydney',location:{latitude:-33.873,longitude:151.207}}]}}));
  const points=[{latitude:-33.8731,longitude:151.2065},{latitude:-33.873,longitude:151.207}];
  function encode(values:typeof points){let lat=0,lng=0,out='';for(const p of values){const a=Math.round(p.latitude*1e5),b=Math.round(p.longitude*1e5);for(const delta of [a-lat,b-lng]){let v=delta<0?~(delta<<1):delta<<1;while(v>=32){out+=String.fromCharCode((32|(v&31))+63);v>>=5;}out+=String.fromCharCode(v+63);}lat=a;lng=b;}return out;}
  const polyline={encodedPolyline:encode(points)};
  await page.route('**/api/maps/route',r=>r.fulfill({json:{routes:[{polyline,distanceMeters:50,duration:'60s',legs:[{steps:[{polyline,distanceMeters:50,navigationInstruction:{instructions:'Head east to Test Library',maneuver:'DEPART'}}]}]}]}}));
- await page.addInitScript(()=>{navigator.geolocation.getCurrentPosition=success=>success({coords:{latitude:-33.8731,longitude:151.2065,accuracy:5},timestamp:Date.now()} as GeolocationPosition);navigator.geolocation.watchPosition=()=>1;navigator.geolocation.clearWatch=()=>{};});
- await page.reload();await page.getByRole('button',{name:'More controls',exact:true}).click();await page.getByRole('button',{name:'Show map',exact:true}).click();await page.getByRole('textbox',{name:'Destination name and suburb',exact:true}).fill('Test Library Sydney');await page.getByRole('button',{name:'Search places',exact:true}).click();await page.getByRole('button',{name:/^1\. Test Library/}).click();await page.getByRole('button',{name:'Confirm place',exact:true}).click();await page.getByRole('button',{name:'Start journey',exact:true}).click();
+ const installRouteLocation=()=>{
+  // Replace the platform object, as in places.spec.ts: WebKit may ignore
+  // assignments to native geolocation methods. Each fix uses epoch milliseconds.
+  Object.defineProperty(navigator,'geolocation',{configurable:true,value:{
+   getCurrentPosition:(success:PositionCallback)=>success({coords:{latitude:-33.8731,longitude:151.2065,accuracy:5},timestamp:Date.now()} as GeolocationPosition),
+   watchPosition:()=>1,clearWatch:()=>{}
+  }});
+ };
+ await page.addInitScript(installRouteLocation);
+ await page.reload();
+ // This WebKit runner restores its native location object during reload, so
+ // reinstall the same fixture in the loaded main world before route actions.
+ await page.evaluate(installRouteLocation);
+ await page.getByRole('button',{name:'More controls',exact:true}).click();await page.getByRole('button',{name:'Show map',exact:true}).click();await page.getByRole('textbox',{name:'Destination name and suburb',exact:true}).fill('Test Library Sydney');await page.getByRole('button',{name:'Search places',exact:true}).click();await page.getByRole('button',{name:/^1\. Test Library/}).click();await page.getByRole('button',{name:'Confirm place',exact:true}).click();await page.getByRole('button',{name:'Start journey',exact:true}).click();
  await expect(page.getByRole('button',{name:'Pause',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Close full-screen map',exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Pause',exact:true}).click();await expect(page.getByRole('button',{name:'Resume',exact:true})).toBeVisible();await page.getByRole('button',{name:'Resume',exact:true}).click();await expect(page.getByRole('button',{name:'Pause',exact:true})).toBeVisible();await page.getByRole('button',{name:'Pause',exact:true}).click();await page.getByRole('button',{name:'End journey',exact:true}).click();await expect(page.getByRole('button',{name:'Start camera assistance',exact:true})).toBeVisible();
 });
@@ -496,6 +534,7 @@ for(const cpu of [false,true]) test(`live ${cpu?'CPU option':'WebGPU unavailable
   else Object.defineProperty(navigator,'gpu',{value:undefined,configurable:true});
  },{cpu});
  await page.reload();
+ await allowCamera(page);
  await page.getByRole('button',{name:'More controls',exact:true}).click();
  await expect.poll(async()=>{await page.getByRole('button',{name:'Start camera assistance',exact:true}).click();return page.getByRole('button',{name:'I’m crossing',exact:true}).count();},{timeout:45000,intervals:[1000]}).toBe(1);
  const rendered=page.locator('canvas[data-camera-renderer]');await expect.poll(async()=>Number(await rendered.getAttribute('data-rendered-frames'))).toBeGreaterThan(0);
@@ -516,6 +555,7 @@ test('live iPhone texture workaround preserves portrait and landscape frame orie
   };
  });
  await page.reload();
+ await allowCamera(page);
  const canvas=page.locator('canvas[data-camera-renderer]');
  await expect(canvas).toHaveAttribute('data-camera-source','oriented-canvas');
  await expect.poll(async()=>Number(await canvas.getAttribute('data-rendered-frames'))).toBeGreaterThan(3);

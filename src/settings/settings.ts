@@ -75,3 +75,21 @@ export const DEFAULT_SETTINGS: AppSettings = {
   acceptedSafetyNotice: false,
 };
 
+/** Treat imported device preferences as untrusted input, including legacy partial exports. */
+export function validateAppSettings(value: unknown): AppSettings {
+  const result = { ...DEFAULT_SETTINGS };
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return result;
+  const raw = value as Record<string, unknown>;
+  for (const key of Object.keys(result) as (keyof AppSettings)[]) {
+    if (typeof result[key] === 'boolean' && typeof raw[key] === 'boolean')
+      (result as unknown as Record<string, unknown>)[key] = raw[key];
+  }
+  if (Object.values(InterfaceMode).includes(raw.interfaceMode as InterfaceMode)) result.interfaceMode = raw.interfaceMode as InterfaceMode;
+  if (Object.values(AppFont).includes(raw.appFont as AppFont)) result.appFont = raw.appFont as AppFont;
+  if (Object.values(Verbosity).includes(raw.verbosity as Verbosity)) result.verbosity = raw.verbosity as Verbosity;
+  if (typeof raw.speechRate === 'number' && Number.isFinite(raw.speechRate) && raw.speechRate >= .6 && raw.speechRate <= 2) result.speechRate = raw.speechRate;
+  if (typeof raw.scoreThreshold === 'number' && Number.isFinite(raw.scoreThreshold) && raw.scoreThreshold >= .2 && raw.scoreThreshold <= .7) result.scoreThreshold = raw.scoreThreshold;
+  if (typeof raw.customModelPath === 'string' && raw.customModelPath.length <= 512) result.customModelPath = raw.customModelPath;
+  return result;
+}
+

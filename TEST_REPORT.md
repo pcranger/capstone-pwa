@@ -1,5 +1,7 @@
 # capstone_PWA verification
 
+Historical report for the 12 October baseline. The 13 October Eye Navi-style implementation, current results and remaining checks are recorded in [implementation status](docs/EYENAVI_IMPLEMENTATION_STATUS.md). The deployment observations below apply to the older main app. The current changes are deployed separately to [dev](docs/DEV_DEPLOYMENT.md).
+
 Verified 12 October 2026 against the rebuilt phone UI and production PWA.
 
 | Check | Result |

@@ -1,5 +1,6 @@
 **
 !Dockerfile
 !server.mjs
+!server-advanced.mjs
 !dist/
 !dist/**
