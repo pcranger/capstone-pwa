@@ -1,6 +1,10 @@
+> Pedestrian detection update (13 October 2026): local pedestrian signal/countdown boxes and possible button boxes are now available. Open Help → Check a reference image to try the same detector on a local photo. Start crossing is disabled because the public models are not validated for Australian road use. Use Already in the road — get assistance to report an existing crossing. See [pedestrian implementation and limitations](docs/PEDESTRIAN_DETECTION.md).
+
 # Current demo validation - 13 October 2026
 
-Types/lint passed. Unit tests: 199 passed. Server tests: 8 passed. Public demo browser tests: 59 passed, 4 intentional synthetic-camera skips. Deployed smoke and Fly health passed. Details: docs/DEMO_VERSION.md and docs/DEV_DEPLOYMENT.md.
+Types/lint passed. Unit tests: 225 passed across 28 files. Server tests: 8 passed. Full demo browser suite: 79 passed, 5 intentional synthetic-camera WebKit skips. After final image-layout adjustments, all 20 executable pedestrian browser scenarios passed again (1 synthetic-camera WebKit skip). Reference images were checked with the actual browser worker and bundled model, including offline countdown reading. The packaged production server also passed actual reference inference and offline countdown checks in Chromium and WebKit on local loopback, with the exact service-worker build and no uncaught browser errors. See docs/PEDESTRIAN_DETECTION.md for provenance, exact observations and limitations. Physical-device and Australian field validation remain outstanding.
+
+The new build has not been published to Fly: its CLI reports no access token available. Earlier deployed smoke/health results in docs/DEV_DEPLOYMENT.md describe the previous demo build.
 
 The optional presenter build has 77 distinct passing scenarios, 8 intentional media skips and 2 unresolved forced CPU-only inference failures. It is excluded from the deployed demo. Physical-device validation remains outstanding.
 

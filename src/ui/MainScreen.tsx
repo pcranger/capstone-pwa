@@ -1,3 +1,5 @@
+import { PedestrianOverlay } from './PedestrianOverlay';
+import { pedestrianStatus, PEDESTRIAN_MAX_AGE_MS } from '../perception/pedestrianPolicy';
 import { PRESENTER_TOOLS } from '../product/demoScope';
 import { useEffect, useRef, useState } from 'react';
 import { MaterialIcons } from '../platform/icons';
@@ -28,6 +30,7 @@ export function MainScreen({ height, topInset = 0, bottomInset = 0, hidden = fal
   const settings = useStore(controller.settings);
   const ui = useStore(controller.ui);
   const telemetry = useSampledStore(controller.ui);
+  const pedestrian = useStore(controller.pedestrian);
   const model = useStore(controller.model);
   const mask = useStore(controller.mask);
   const camera = useStore(controller.cameraStatus);
@@ -52,6 +55,7 @@ export function MainScreen({ height, topInset = 0, bottomInset = 0, hidden = fal
   const routeOnly = journey.phase === 'walking' && !journey.crossing;
   const signal = ui.snapshot.signal;
   const hazard = fresh ? ui.snapshot.hazards[0] : null;
+  const pedestrianFresh = fresh && nowMs() - pedestrian.timestampMs <= PEDESTRIAN_MAX_AGE_MS;
   let status = !assistOn ? 'Camera assistance is off.' : routeOnly ? 'Watching nearby traffic.' : 'No pedestrian signal verified.';
   if (assistOn && !routeOnly && fresh && signal.phase !== SignalPhase.UNKNOWN) {
     status = !signal.trusted ? 'Signal colour is unverified.' : {
@@ -62,6 +66,7 @@ export function MainScreen({ height, topInset = 0, bottomInset = 0, hidden = fal
       [SignalPhase.DONT_WALK_FLASHING]: 'Don’t-walk signal is flashing.',
     }[signal.phase];
   }
+  if (assistOn && !routeOnly) status = pedestrianStatus(pedestrian, nowMs(), ui.snapshot.mode === AssistMode.CROSSING);
   if (hazard && assistOn) status = S.hazardBanner(hazard.side === Side.LEFT ? S.sideLeft : hazard.side === Side.RIGHT ? S.sideRight : S.sideAhead);
   let unavailable: string | null = null;
   if (!hasPermission) unavailable = 'Camera permission is off. Route guidance remains available.';
@@ -80,6 +85,7 @@ export function MainScreen({ height, topInset = 0, bottomInset = 0, hidden = fal
       {hasPermission && <CameraSurface key={attempt} showPreview={settings.showPreview} active={!hidden} resizeMode="cover" style={StyleSheet.absoluteFill} />}
       {developer && fresh && settings.showPreview && model.kind === 'ready' && model.info.format === 'SEGMENTATION' &&
         <SegmentationOverlay mask={mask} frameAspect={ui.frameAspect} resizeMode="cover" />}
+      {pedestrianFresh && settings.showPreview && <PedestrianOverlay scene={pedestrian} frameAspect={ui.frameAspect} />}
       {developer && fresh && settings.showPreview && settings.showOverlay &&
         <DetectionOverlay snapshot={ui.snapshot} frameAspect={ui.frameAspect} resizeMode="cover" visibility={settings} />}
     </View>
@@ -103,11 +109,13 @@ export function MainScreen({ height, topInset = 0, bottomInset = 0, hidden = fal
       </View>
       {ui.snapshot.mode === AssistMode.CROSSING && !['walking', 'paused'].includes(journey.phase) &&
         <Text style={type.bodyMedium}>{S.crossingFinishHint}</Text>}
+      {assistOn && <Text style={type.labelMedium}>Experimental pedestrian detection · observations do not authorise crossing.</Text>}
       {!settings.showPreview && <Text style={type.bodyMedium}>Preview hidden.</Text>}
       {!hasPermission && <TextButton label={canRequestPermission ? 'Allow camera' : 'Open app settings'}
         onPress={() => { if (canRequestPermission) void requestPermission(); else void Linking.openSettings(); }} />}
       {hasPermission && camera === 'unavailable' &&
         <TextButton label="Retry camera" onPress={() => setAttempt(a => a + 1)} />}
+      {pedestrian.error && camera === 'running' && <TextButton label="Retry pedestrian detection" onPress={() => controller.retryPedestrianDetection()} />}
       {!developer && journey.phase === 'walking' && journey.route && <Text style={type.bodyMedium}>
         {journey.crossing ? 'Crossing assistance' : journey.route.steps[journey.stepIndex]?.instruction}
       </Text>}

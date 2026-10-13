@@ -123,3 +123,19 @@ it('a canceled pending grant cannot overwrite a new camera session or its resume
   documentEvents.hidden = true; documentEvents.dispatchEvent(new Event('visibilitychange')); documentEvents.hidden = false; documentEvents.dispatchEvent(new Event('visibilitychange')); await flush();
   expect(getUserMedia).toHaveBeenCalledTimes(3); expect(controller.getCameraStream()).not.toBeNull();
 });
+
+it('protected start commands cannot enter crossing or pause a route on unverified observations', async () => {
+  controller.engine.command(UserCommand.START_ASSIST, 0);
+  controller.command(UserCommand.START_CROSSING);
+  expect(controller.engine.mode).toBe(AssistMode.SEARCHING);
+  expect(controller.notice.value).toContain('Do not start');
+  controller.command(UserCommand.TOGGLE_CROSSING);
+  expect(controller.engine.mode).toBe(AssistMode.SEARCHING);
+  await startFromMenu(); controller.crossingAction('start');
+  expect(controller.journey.state.value.crossing).toBe(false);
+});
+it('an explicit existing-crossing report keeps assistance available even when no signal is verified', () => {
+  controller.reportAlreadyCrossing(); expect(controller.engine.mode).toBe(AssistMode.CROSSING);
+  controller.releaseCamera(); expect(controller.engine.mode).toBe(AssistMode.CROSSING);
+  controller.crossingAction('finish'); expect(controller.engine.mode).toBe(AssistMode.SEARCHING);
+});

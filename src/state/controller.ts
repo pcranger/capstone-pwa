@@ -1,4 +1,7 @@
 import { Store } from "./store";
+import { PedestrianClient } from '../perception/pedestrianClient';
+import { EMPTY_PEDESTRIAN_SCENE, type PedestrianScene } from '../perception/pedestrianTypes';
+import { crossingDecision, pedestrianStatus, PEDESTRIAN_MAX_AGE_MS } from '../perception/pedestrianPolicy';
 import { nowMs } from "../core/geometry";
 import { BrowserSessionLogger } from "../platform/logger";
 import {
@@ -134,6 +137,44 @@ class Controller {
   cameraPermission = new Store(false);
   pipeline = new Store(EMPTY_PIPELINE);
 
+  pedestrian = new Store<PedestrianScene>(EMPTY_PEDESTRIAN_SCENE);
+  private pedestrianClient: PedestrianClient | null = null;
+  private pedestrianSpeechKey = '';
+  private pedestrianSpeechAt = -Infinity;
+  get crossingDecision() { return crossingDecision(this.pedestrian.value, nowMs()); }
+  private receivePedestrian(scene: PedestrianScene) {
+    if (nowMs() - scene.timestampMs > PEDESTRIAN_MAX_AGE_MS && !scene.error) return;
+    this.pedestrian.set(scene);
+    if (this.engine.mode === AssistMode.IDLE || this.productBrowsing || !this.home || document.hidden) return;
+    const decision = crossingDecision(scene, nowMs());
+    const button = scene.observations.find(o => o.kind === 'button');
+    const text = this.engine.mode === AssistMode.CROSSING
+      ? decision.seconds !== null ? `Countdown reads ${decision.seconds} seconds. Continue using your crossing skills; confirm when you reach the far footpath.` : scene.observations.some(o => o.phase === 'RED') ? 'Red signal observed. If already crossing, continue using your crossing skills to reach the footpath.' : ''
+      : button && !scene.observations.some(o => o.kind === 'signal' || o.kind === 'countdown')
+        ? `Possible crossing button, ${button.box.centerX < .4 ? 'left in the camera view' : button.box.centerX > .6 ? 'right in the camera view' : 'centred in the camera view'}.` : decision.message;
+    const key = text.replace(/\d+/g, '#');
+    if (text && (key !== this.pedestrianSpeechKey || nowMs() - this.pedestrianSpeechAt > 12000)) {
+      this.pedestrianSpeechKey = key; this.pedestrianSpeechAt = nowMs();
+      this.announcements.cancelBelow(90);
+      this.announcements.cancelPrefix('pedestrian:');
+      void this.announcements.enqueue({text,priority:90,key:`pedestrian:${key}`,expiresAt:Date.now()+Math.max(0,PEDESTRIAN_MAX_AGE_MS-(nowMs()-scene.timestampMs))});
+    }
+  }
+  retryPedestrianDetection() {
+    if (!this.stream || !this.video || document.hidden) return;
+    const generation = this.generation;
+    this.pedestrianClient?.dispose(); this.pedestrianClient = null;
+    this.pedestrian.set(EMPTY_PEDESTRIAN_SCENE);
+    try { this.pedestrianClient = new PedestrianClient(scene => { if (generation === this.generation) this.receivePedestrian(scene); }); }
+    catch { this.pedestrian.set({ ...EMPTY_PEDESTRIAN_SCENE, error: 'Pedestrian detection unavailable.' }); }
+  }
+  /** Reporting an existing crossing is not permission to begin one. */
+  reportAlreadyCrossing() {
+    this.feedback.unlock();
+    if (this.engine.mode === AssistMode.IDLE) this.output(this.engine.command(UserCommand.START_ASSIST, nowMs()));
+    this.output(this.engine.command(UserCommand.START_CROSSING, nowMs()));
+    if (this.journey.hasJourney) this.journey.enterCrossing();
+  }
   private checking = false;
   private checkState = new Store({ text: "" });
   voiceCheck = {
@@ -301,10 +342,7 @@ class Controller {
       aimSonar: next.aimSonar,
       veerGuidance: next.veerGuidance,
       vehicleAlerts: next.vehicleAlerts,
-      autoDetectCrossing:
-        next.interfaceMode === "DEVELOPER" &&
-        !this.journey.hasJourney &&
-        next.autoDetectCrossing,
+      autoDetectCrossing: false,
       verbosity: next.verbosity,
     };
     if (previous.useGpu !== next.useGpu) {
@@ -359,6 +397,17 @@ class Controller {
   }
   command(command: UserCommand, _explicit = false) {
     this.feedback.unlock();
+    if ((command === UserCommand.START_CROSSING || command === UserCommand.TOGGLE_CROSSING && this.engine.mode !== AssistMode.CROSSING) && this.crossingDecision.blocked) {
+      this.notice.set(this.crossingDecision.message);
+      this.sayNavigation(this.crossingDecision.message, 90);
+      return;
+    }
+    if (command === UserCommand.REPEAT_STATUS && this.engine.mode !== AssistMode.IDLE) {
+      const out = this.engine.command(command, nowMs());
+      out.cues = out.cues.filter(c => c.kind !== 'speak' || !['SIGNAL_UNAVAILABLE', 'STATUS_NO_SIGNAL'].includes(c.phrase));
+      out.cues.unshift({kind:'speakText',text:pedestrianStatus(this.pedestrian.value,nowMs(),this.engine.mode===AssistMode.CROSSING),priority:2});
+      this.output(out, _explicit ? 80 : 0); return;
+    }
     if (
       command === UserCommand.START_ASSIST &&
       (this.model.value.kind !== "ready" || !this.hasRecentFrame)
@@ -377,7 +426,7 @@ class Controller {
       this.command(UserCommand.START_ASSIST);
     } else {
       this.command(UserCommand.START_CROSSING);
-      if (this.journey.hasJourney) this.journey.enterCrossing();
+      if (this.engine.mode === AssistMode.CROSSING && this.journey.hasJourney) this.journey.enterCrossing();
     }
   }
   repeatGuidance() {
@@ -587,6 +636,9 @@ class Controller {
   }
   private releaseCameraStream() {
     ++this.generation;
+    this.pedestrianClient?.dispose(); this.pedestrianClient = null;
+    this.announcements.cancelPrefix('pedestrian:');
+    this.pedestrian.set(EMPTY_PEDESTRIAN_SCENE); this.pedestrianSpeechKey = '';
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
     if (this.video) this.video.srcObject = null;
@@ -639,6 +691,7 @@ class Controller {
           hasPedestrianSignalClasses: false,
         },
       });
+      this.retryPedestrianDetection();
       const capture = document.createElement("canvas"),
         grayCanvas = document.createElement("canvas");
       grayCanvas.width = 160;
@@ -674,6 +727,7 @@ class Controller {
           }
           const stamp = nowMs(),
             t = performance.now();
+          this.pedestrianClient?.capture(video, stamp);
           const predictions = await this.detector!.detect(
             capture,
             20,

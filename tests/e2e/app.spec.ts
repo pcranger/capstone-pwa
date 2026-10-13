@@ -331,7 +331,7 @@ test("live camera runs local detection and preserves crossing through overlays",
   await expect(rendered).toBeVisible();
   await expect.poll(async () => Number(await rendered.getAttribute('data-rendered-frames'))).toBeGreaterThan(0);
   await expect(rendered).toHaveAttribute('data-camera-renderer', /three-(webgpu|webgl)/);
-  await page.getByRole("button", { name: "I’m crossing", exact: true }).click();
+  await page.getByRole("button", { name: "Already in the road — get assistance", exact: true }).click();
   await page
     .getByRole("button", { name: "Hide controls", exact: true })
     .click();
@@ -423,7 +423,7 @@ test("live backgrounding releases the camera and retains explicit footpath compl
       { timeout: 45000, intervals: [1000] },
     )
     .toBe(1);
-  await page.getByRole("button", { name: "I’m crossing", exact: true }).click();
+  await page.getByRole("button", { name: "Already in the road — get assistance", exact: true }).click();
   await page.evaluate(() => {
     Object.defineProperty(document, "hidden", {
       configurable: true,

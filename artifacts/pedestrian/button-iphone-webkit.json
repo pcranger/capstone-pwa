@@ -1,0 +1,41 @@
+{
+  "fixture": "button",
+  "browser": "iphone-webkit",
+  "boxes": 4,
+  "coordinates": [
+    {
+      "kind": "pedestrian-box-button",
+      "label": "Possible crossing button",
+      "x": 64,
+      "y": 17,
+      "width": 231,
+      "height": 417
+    },
+    {
+      "kind": "pedestrian-box-label",
+      "label": "Possible crossing button",
+      "x": 0,
+      "y": -17,
+      "width": 260,
+      "height": 21
+    },
+    {
+      "kind": "pedestrian-box-press-surface",
+      "label": "Possible press surface",
+      "x": 124,
+      "y": 246,
+      "width": 123,
+      "height": 133
+    },
+    {
+      "kind": "pedestrian-box-label",
+      "label": "Possible press surface",
+      "x": -32,
+      "y": -25,
+      "width": 260,
+      "height": 21
+    }
+  ],
+  "text": "Check a reference image\n\nExperimental image check. Choose a local image; it stays on this device. This is a still-image result, not live crossing guidance.\n\nPedestrian reference image\n\nImage check complete.\n\nPossible crossing buttonPossible press surface\n\nNo pedestrian signal identified. Do not start crossing.\n\nPossible crossing button · unverified shape estimate\nPossible press surface · unverified shape estimate",
+  "errors": []
+}

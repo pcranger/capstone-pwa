@@ -32,6 +32,10 @@ export class AnnouncementScheduler{
   private pump(){if(this.active)return;let p:Pending|undefined;while((p=this.waiting.shift())){if(p.expiresAt>this.now())break;p.resolve(false);p=undefined;}if(!p)return;this.active=p;const g=++this.generation;
     void this.speak(p.text).catch(()=>false).then(ok=>{if(g!==this.generation)return;p.resolve(ok);this.active=null;this.pump();});}
   cancel(){this.generation++;this.active?.resolve(false);this.active=null;this.waiting.forEach(p=>p.resolve(false));this.waiting=[];this.stop();}
+  cancelPrefix(prefix:string){
+    this.waiting=this.waiting.filter(p=>{if(!p.key.startsWith(prefix))return true;p.resolve(false);return false;});
+    if(this.active?.key.startsWith(prefix)){this.generation++;this.active.resolve(false);this.active=null;this.stop();this.pump();}
+  }
   cancelBelow(priority:number){
     this.waiting=this.waiting.filter(p=>{if(p.priority>=priority)return true;p.resolve(false);return false;});
     if(this.active&&this.active.priority<priority){this.generation++;this.active.resolve(false);this.active=null;this.stop();this.pump();}

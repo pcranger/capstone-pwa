@@ -151,13 +151,14 @@ export function JourneyControls({ stacked, compact = false }: { stacked: boolean
   const [expanded, setExpanded] = useState(false);
   const s = useStore(controller.journey.state);
   const { snapshot } = useStore(controller.ui);
+  useStore(controller.pedestrian);
   const mode = snapshot.mode;
   const assistOn = mode !== AssistMode.IDLE;
   const paused = s.phase === 'paused';
   const active = s.phase === 'walking' || paused;
   const crossing = mode === AssistMode.CROSSING || (paused && s.crossing);
   const action = crossing ? 'finish' : s.phase === 'walking' && !s.crossing ? 'help' : 'start';
-  const label = action === 'finish' ? 'I’m on the footpath' : action === 'help' ? 'Crossing help' : 'I’m crossing';
+  const label = action === 'finish' ? 'I’m on the footpath' : action === 'help' ? 'Crossing help' : 'Start crossing';
   const button = (text: string, onPress: () => void, color = Colors.SurfaceVariant, enabled = true) =>
     <BigButton text={text} onPress={onPress} multiline color={color} enabled={enabled} style={stacked ? undefined : { flex: 1 }} />;
 
@@ -168,9 +169,10 @@ export function JourneyControls({ stacked, compact = false }: { stacked: boolean
 
   return <View style={styles.footer}>
     {compact && <TextButton label="Hide controls" onPress={() => setExpanded(false)} />}
+    {!crossing && (assistOn || active) && <TextButton label="Already in the road — get assistance" onPress={() => controller.reportAlreadyCrossing()} />}
     {s.busy === 'starting' && <Text style={type.bodyMedium}>Checking location…</Text>}
     <View style={[styles.controls, stacked && { flexDirection: 'column', alignItems: 'stretch' }]}>
-      {(!paused || s.crossing) && (assistOn || active) && button(label, () => controller.crossingAction(action), Colors.Crossing, !s.busy && (assistOn || action === 'finish'))}
+      {(!paused || s.crossing) && (assistOn || active) && button(label, () => controller.crossingAction(action), Colors.Crossing, !s.busy && (assistOn || action === 'finish') && (action !== 'start' || !controller.crossingDecision.blocked))}
       {(assistOn || active) && button('Repeat', () => controller.repeatGuidance(), Colors.SurfaceVariant, assistOn || s.phase === 'walking')}
       {s.phase === 'walking' && button('Pause', () => controller.pauseJourney())}
       {paused && !s.crossing && button('Resume', () => { void controller.startJourney(); }, Colors.Crossing, !s.busy)}

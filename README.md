@@ -1,3 +1,5 @@
+> Pedestrian detection update (13 October 2026): local pedestrian signal/countdown boxes and possible button boxes are now available. Open Help → Check a reference image to try the same detector on a local photo. Start crossing is disabled because the public models are not validated for Australian road use. Use Already in the road — get assistance to report an existing crossing. See [pedestrian implementation and limitations](docs/PEDESTRIAN_DETECTION.md).
+
 # CrossWise demo PWA
 
 CrossWise demonstrates walking navigation, spoken guidance, on-device camera assistance, explicit crossing controls and nearby places. The original detector and model assets are unchanged.

@@ -14,5 +14,6 @@ export default defineConfig({
       ),
     },
   },
+  worker: { format: 'es' },
   define: { __DEV__: false },
 });
