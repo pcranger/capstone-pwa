@@ -1,0 +1,49 @@
+{
+  "id": "03-pultney",
+  "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\Pultney-Street-pedestrian-crossing-1200x800-2024-05-02T134019.webp",
+  "input_sha256": "a24829b8ba00f976e5886e8137bcbbebfc7c0f596a07e26a0cc10a84d1cb56a3",
+  "observations": [
+    {
+      "id": "model-160496",
+      "kind": "signal",
+      "box": {
+        "left": 0.5334930658340454,
+        "top": 0.43390217765432887,
+        "right": 0.6022626638412476,
+        "bottom": 0.6717045089400066
+      },
+      "phase": "RED",
+      "score": 0.8130791849057815,
+      "source": "pretrained"
+    }
+  ],
+  "diagnostics": {
+    "signalCandidates": [
+      {
+        "observation": {
+          "id": "model-160496",
+          "kind": "signal",
+          "box": {
+            "left": 0.5334930658340454,
+            "top": 0.43390217765432887,
+            "right": 0.6022626638412476,
+            "bottom": 0.6717045089400066
+          },
+          "phase": "RED",
+          "score": 0.8130791849057815,
+          "source": "pretrained"
+        },
+        "evidence": {
+          "accepted": true,
+          "reason": "pedestrian-silhouette",
+          "width": 20,
+          "height": 41,
+          "headRatio": 0.75,
+          "splitRows": 10
+        }
+      }
+    ]
+  },
+  "policy": "Red pedestrian signal observed. Do not start crossing.",
+  "errors": []
+}

@@ -69,6 +69,76 @@ export function darkSurround(image: PixelImage, box: BoxF): boolean {
   return total > 0 && dark / total > .65;
 }
 
+export interface SymbolEvidence {
+  accepted: boolean;
+  reason: 'pedestrian-silhouette' | 'coarse-red-silhouette' | 'colour-unresolved' | 'too-small' | 'round-or-wide-lamp' | 'head-not-distinct' | 'legs-not-distinct';
+  width: number; height: number; headRatio: number; splitRows: number;
+}
+
+/** Verify the lit figure inside a detector box, rather than the box/housing aspect. */
+export function verifyPedestrianSymbol(image: PixelImage, box: BoxF, phase: 'GREEN' | 'RED' | 'UNKNOWN'): SymbolEvidence {
+  const evidence: SymbolEvidence = { accepted: false, reason: 'colour-unresolved', width: 0, height: 0, headRatio: 0, splitRows: 0 };
+  if (phase === 'UNKNOWN') return evidence;
+  const l = Math.max(0, Math.floor(box.left * image.width)), t = Math.max(0, Math.floor(box.top * image.height));
+  const r = Math.min(image.width, Math.ceil(box.right * image.width)), b = Math.min(image.height, Math.ceil(box.bottom * image.height));
+  const lit: [number, number][] = [];
+  let left = r, top = b, right = l, bottom = t;
+  for (let y = t; y < b; y++) for (let x = l; x < r; x++) {
+    const p = (y * image.width + x) * 4;
+    if (lampColour(image.data[p], image.data[p + 1], image.data[p + 2]) !== phase) continue;
+    lit.push([x, y]); left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y);
+  }
+  const width = right - left + 1, height = bottom - top + 1;
+  evidence.width = Math.max(0, width); evidence.height = Math.max(0, height);
+  if (lit.length < 6 || width < 3 || height < 8) return { ...evidence, reason: 'too-small' };
+  if (height / width < 1.35 || height / width > 4) return { ...evidence, reason: 'round-or-wide-lamp' };
+  const rows = Array.from({ length: height }, () => new Uint8Array(width));
+  for (const [x, y] of lit) rows[y - top][x - left] = 1;
+  const counts = rows.map(row => row.reduce((sum, value) => sum + value, 0));
+  const headRows = Math.max(1, Math.ceil(height * .2));
+  const head = Math.max(...counts.slice(0, headRows)), torso = Math.max(...counts.slice(Math.floor(height * .25), Math.ceil(height * .6)));
+  evidence.headRatio = head / Math.max(1, torso);
+  let headX = 0, headPixels = 0;
+  for (let y = 0; y < headRows; y++) for (let x = 0; x < width; x++) if (rows[y][x]) { headX += x + .5; headPixels++; }
+  const centre = headX / Math.max(1, headPixels) / width;
+  if (torso < 2 || evidence.headRatio > .8 || centre < .18 || centre > .82) return { ...evidence, reason: 'head-not-distinct' };
+  const minimumGap = Math.max(1, Math.floor(width * .1));
+  const minimumLeg = Math.max(1, Math.ceil(width * .07));
+  for (let y = Math.floor(height * .65); y < Math.ceil(height * .94); y++) {
+    const row = rows[y];
+    let split = false;
+    // A genuine gap between two legs must have lit evidence on both sides.
+    // Small gaps between LED dots are not sufficient.
+    for (let x = Math.ceil(width * .25); x < Math.floor(width * .75); x++) {
+      if (row[x]) continue;
+      let end = x;
+      while (end < width && !row[end]) end++;
+      if (end - x >= minimumGap && end <= width * .8 && row.slice(0, x).reduce((a, v) => a + v, 0) >= minimumLeg && row.slice(end).reduce((a, v) => a + v, 0) >= minimumLeg) { split = true; break; }
+      x = end;
+    }
+    if (split) evidence.splitRows++;
+  }
+  if (evidence.splitRows >= Math.max(2, Math.floor(height * .08))) return { ...evidence, accepted: true, reason: 'pedestrian-silhouette' };
+  // Tiny red standing figures lose their leg gap through blur. Retain only a
+  // tall, centred head/torso profile; never use this exception for a green claim.
+  if (phase === 'RED' && height <= 15 && width <= 8 && height / width >= 1.7) return { ...evidence, accepted: true, reason: 'coarse-red-silhouette' };
+  return { ...evidence, reason: 'legs-not-distinct' };
+}
+
+/** A countdown must be luminous digits on a dark display, not coloured foliage. */
+export function isCountdownDisplay(image: PixelImage, box: BoxF): boolean {
+  if (!darkSurround(image, box)) return false;
+  let amber = 0, background = 0, dark = 0;
+  for (let y = 0; y < 48; y++) for (let x = 0; x < 48; x++) {
+    const px = Math.min(image.width - 1, Math.max(0, Math.floor((box.left + (x + .5) / 48 * box.width) * image.width)));
+    const py = Math.min(image.height - 1, Math.max(0, Math.floor((box.top + (y + .5) / 48 * box.height) * image.height)));
+    const p = (py * image.width + px) * 4;
+    if (lampColour(image.data[p], image.data[p + 1], image.data[p + 2]) === 'AMBER') amber++;
+    else { background++; if (Math.max(image.data[p], image.data[p + 1], image.data[p + 2]) < 100) dark++; }
+  }
+  return amber >= 48 * 48 * .015 && amber < 48 * 48 * .6 && background > 0 && dark / background >= .88;
+}
+
 /** Seven-segment geometry handles digital LED fonts that general-purpose OCR often misses. */
 export function readSevenSegment(image: PixelImage, digits: ColourRegion[]): number | null {
   const segments = [[.2, 0, .9, .16], [.65, .12, 1, .45], [.6, .55, 1, .88], [.05, .84, .85, 1], [0, .55, .35, .9], [0, .12, .35, .45], [.1, .42, .9, .6]];
@@ -115,7 +185,8 @@ export function symbolRegions(image: PixelImage, regions: ColourRegion[]): Pedes
       }
       const head = Math.max(...rows.slice(0, 6)), torso = Math.max(...rows.slice(9, 21));
       return head >= 2 && torso >= 5 && head < torso * .95;
-    }).slice(0, 6).map((r, i) => ({ id: `shape-${i}`, kind: 'signal', box: r.box, phase: r.colour === 'RED' ? 'RED' : 'GREEN', score: .55, source: 'shape' }));
+    }).filter(r => verifyPedestrianSymbol(image, r.box, r.colour === 'RED' ? 'RED' : 'GREEN').accepted)
+    .slice(0, 6).map((r, i) => ({ id: `shape-${i}`, kind: 'signal', box: r.box, phase: r.colour === 'RED' ? 'RED' : 'GREEN', score: .55, source: 'shape' }));
 }
 
 export function countdownRegions(regions: ColourRegion[]): BoxF[] {

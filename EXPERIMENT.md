@@ -6,6 +6,8 @@ Run `npm ci`, then `npm run dev -- --port 8082`. The experiment has its own depe
 
 After separation, an independent dependency install and production build passed, followed by **20 passing pedestrian browser scenarios and 1 intentional synthetic-camera WebKit skip**. These include reference inference, offline countdowns, worker recovery and concurrent live-camera operation. The original demo also rebuilt successfully from its restored baseline. Its working tree is clean; `main` remains at `5b92373`.
 
+After the vehicle-exclusion follow-up, the final full check passes **234 unit tests, 8 server tests and 103 browser scenarios**, with 5 intentional synthetic-camera WebKit skips. See the current `TEST_REPORT.md` and the linked follow-up report for results and limitations.
+
 ## Models run together
 
 The existing COCO-SSD detector continues detecting vehicles and other supported objects. The extra YOLOv5s6 pedestrian model runs asynchronously in a separate Web Worker using one-thread ONNX WASM. The controller posts a pedestrian frame before awaiting COCO inference. Pedestrian frames have at most a 960-pixel edge and are sampled no faster than every 700 ms, with only one frame in flight. YOLO then uses a 640×640 letterboxed input. The two models process the same camera view at different resolutions/cadences; their predictions are not fused into one network.
@@ -26,6 +28,6 @@ The exact attachment ending `84746c96-d4ef-42ae-b16e-ffc651adcc5c.png` was rerun
 
 ## Before merging
 
-The subsequent [six-image evaluation](artifacts/pedestrian/six-image-evaluation/REPORT.md) found three false green predictions on vehicle lights and a false foliage countdown in the actual app pipeline. These remain unfixed and strengthen the reason to keep the work isolated. The report and annotated outputs preserve both the successful pedestrian detections and these failures.
+The subsequent [six-image evaluation](artifacts/pedestrian/six-image-evaluation/REPORT.md) found three false green predictions on vehicle lights and a false foliage countdown in the actual app pipeline. The [vehicle-exclusion follow-up](artifacts/pedestrian/vehicle-exclusion-evaluation/REPORT.md) adds symbol and display verification: all five real signals remain, the three false greens and foliage timer are removed on these examples, and both new vehicle-light close-ups produce no pedestrian observations. The unchanged raw model still has the original false positives. These are development examples rather than independent field validation; keep the work isolated until the owner is satisfied.
 
 Review the experiment branch and repeat the integration tests on the intended destination branch. This branch is based on the focused demo, so a merge into an older `main` also includes the earlier demo-scope changes. Cherry-picking `31de9ed` onto another base is an alternative when only the pedestrian feature is wanted; resolve integration conflicts and rerun tests. New experiment-only evaluation commits can be reviewed independently. Do not deploy or merge until the owner is satisfied.

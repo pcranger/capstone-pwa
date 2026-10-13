@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BoxF } from '../../src/core/geometry';
-import { lampColour, readSevenSegment, symbolRegions, type PixelImage } from '../../src/perception/pedestrianVision';
+import { isCountdownDisplay, lampColour, readSevenSegment, symbolRegions, verifyPedestrianSymbol, type PixelImage } from '../../src/perception/pedestrianVision';
 
 function digitImage(text: string): PixelImage {
   const width = text.length * 45, height = 70, data = new Uint8ClampedArray(width * height * 4);
@@ -25,5 +25,49 @@ describe('pedestrian pixel checks', () => {
   it('does not identify a circular green vehicle lamp as a pedestrian figure', () => {
     const image:PixelImage={width:40,height:40,data:new Uint8ClampedArray(40*40*4)};
     expect(symbolRegions(image,[{box:new BoxF(.1,.1,.9,.9),colour:'GREEN',pixels:200}])).toEqual([]);
+  });
+});
+
+describe('illuminated symbol verification', () => {
+  const blank = (): PixelImage => ({width:100,height:130,data:new Uint8ClampedArray(100*130*4)});
+  function paint(image:PixelImage,test:(x:number,y:number)=>boolean,colour:[number,number,number]){
+    for(let y=0;y<image.height;y++)for(let x=0;x<image.width;x++)if(test(x,y)){const p=(y*image.width+x)*4;image.data.set([...colour,255],p);}
+  }
+  const whole = new BoxF(0,0,1,1);
+  it.each(['GREEN','RED'] as const)('accepts a %s figure with a head, torso and separated legs',phase=>{
+    const image=blank();
+    paint(image,(x,y)=>x>=45&&x<55&&y>=15&&y<25||x>=38&&x<62&&y>=28&&y<60||x>=25&&x<75&&y>=35&&y<45||y>=60&&y<100&&(x>=38&&x<47||x>=55&&x<64),phase==='GREEN'?[0,240,100]:[240,0,0]);
+    expect(verifyPedestrianSymbol(image,whole,phase).accepted).toBe(true);
+  });
+  it.each(['GREEN','RED'] as const)('rejects a round %s vehicle lamp inside a tall housing box',phase=>{
+    const image=blank();paint(image,(x,y)=>(x-50)**2+(y-90)**2<20**2,phase==='GREEN'?[0,240,100]:[240,0,0]);
+    expect(verifyPedestrianSymbol(image,whole,phase)).toMatchObject({accepted:false,reason:'round-or-wide-lamp'});
+  });
+  it('rejects an upright arrow with a shaft instead of two legs',()=>{
+    const image=blank();paint(image,(x,y)=>y>=15&&y<45&&Math.abs(x-50)<y-14||y>=40&&y<110&&x>=44&&x<56,[0,240,100]);
+    expect(verifyPedestrianSymbol(image,whole,'GREEN').accepted).toBe(false);
+  });
+  it('rejects an elliptical vehicle lamp even when its height exceeds its width',()=>{
+    const image=blank();paint(image,(x,y)=>(x-50)**2/12**2+(y-65)**2/30**2<1,[0,240,100]);
+    expect(verifyPedestrianSymbol(image,whole,'GREEN').accepted).toBe(false);
+  });
+  it('does not turn an unresolved colour into a verified signal',()=>{
+    expect(verifyPedestrianSymbol(blank(),whole,'UNKNOWN').accepted).toBe(false);
+  });
+  it('retains a blurred tiny red upright figure but does not apply that exception to green',()=>{
+    const image=blank();
+    const figure=(x:number,y:number)=>y>=10&&y<12&&x>=41&&x<43||y>=12&&y<19&&x>=40&&x<44;
+    paint(image,figure,[240,0,0]);
+    expect(verifyPedestrianSymbol(image,whole,'RED')).toMatchObject({accepted:true,reason:'coarse-red-silhouette'});
+    const green=blank();paint(green,figure,[0,240,100]);
+    expect(verifyPedestrianSymbol(green,whole,'GREEN').accepted).toBe(false);
+  });
+  it('requires dark non-digit pixels inside a countdown panel',()=>{
+    const image:PixelImage={width:120,height:120,data:new Uint8ClampedArray(120*120*4)},digit=digitImage('2');
+    for(let y=0;y<digit.height;y++)for(let x=0;x<digit.width;x++)image.data.set(digit.data.slice((y*digit.width+x)*4,(y*digit.width+x)*4+4),((y+25)*120+x+35)*4);
+    const box=new BoxF(38/120,25/120,71/120,93/120);
+    expect(isCountdownDisplay(image,box)).toBe(true);
+    paint(image,(x,y)=>x>=38&&x<71&&y>=25&&y<93&&lampColour(image.data[(y*120+x)*4],image.data[(y*120+x)*4+1],image.data[(y*120+x)*4+2])!=='AMBER',[100,145,100]);
+    expect(isCountdownDisplay(image,box)).toBe(false);
   });
 });

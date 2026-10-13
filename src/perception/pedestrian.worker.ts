@@ -2,7 +2,7 @@
 import * as ort from 'onnxruntime-web/wasm';
 import { createWorker, PSM, type Worker as OCRWorker } from 'tesseract.js';
 import { BoxF } from '../core/geometry';
-import { buttonRegions, colourInBox, colourRegions, countdownRegions, darkSurround, readSevenSegment, symbolRegions, type PixelImage } from './pedestrianVision';
+import { buttonRegions, colourInBox, colourRegions, countdownRegions, isCountdownDisplay, readSevenSegment, symbolRegions, verifyPedestrianSymbol, type PixelImage } from './pedestrianVision';
 import { countdownBitmap, letterboxPixels } from './pedestrianPixels';
 import wasmURL from '../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url';
 import type { PedestrianObservation } from './pedestrianTypes';
@@ -26,7 +26,7 @@ async function recognizeDigits(box: BoxF, pixels: PixelImage): Promise<number | 
   return /^\d{1,2}$/.test(text) && result.data.confidence >= 45 ? Number(text) : null;
 }
 
-async function detect(pixels: PixelImage): Promise<PedestrianObservation[]> {
+async function detect(pixels: PixelImage) {
   const { tensor, width, height, dx, dy } = letterboxPixels(pixels);
   const feed = new ort.Tensor('float32', tensor, [1, 3, 640, 640]);
   let outputs: ort.InferenceSession.ReturnType | undefined;
@@ -46,12 +46,15 @@ async function detect(pixels: PixelImage): Promise<PedestrianObservation[]> {
     }
   } finally { feed.dispose(); if (outputs) Object.values(outputs).forEach(t => t.dispose()); }
   const regions = colourRegions(pixels);
-  const signals = modelObservations.sort((a, b) => b.score - a.score).filter((o, i, all) => !all.slice(0, i).some(p => p.box.iou(o.box) > .4));
+  const candidates = modelObservations.sort((a, b) => b.score - a.score).filter((o, i, all) => !all.slice(0, i).some(p => p.box.iou(o.box) > .4));
+  const checked = candidates.map(observation => ({ observation, evidence: verifyPedestrianSymbol(pixels, observation.box, observation.phase) }));
+  const signals = checked.filter(candidate => candidate.evidence.accepted).map(candidate => candidate.observation);
   for (const shape of symbolRegions(pixels, regions)) {
     if (!signals.some(o => o.box.iou(shape.box) > .1 || shape.box.centerX > o.box.left && shape.box.centerX < o.box.right && shape.box.centerY > o.box.top && shape.box.centerY < o.box.bottom)) signals.push(shape);
   }
   const timers: PedestrianObservation[] = [];
-  for (const box of countdownRegions(regions.filter(r => r.colour !== 'AMBER' || darkSurround(pixels, r.box)))) {
+  for (const box of countdownRegions(regions)) {
+    if (!isCountdownDisplay(pixels, box)) continue;
     const digits = regions.filter(r => r.colour === 'AMBER' && r.box.centerX >= box.left && r.box.centerX <= box.right && r.box.centerY >= box.top && r.box.centerY <= box.bottom && r.box.height >= box.height * .7);
     const sevenSegment = readSevenSegment(pixels, digits);
     const seconds = sevenSegment ?? await recognizeDigits(box, pixels);
@@ -60,7 +63,7 @@ async function detect(pixels: PixelImage): Promise<PedestrianObservation[]> {
     if (seconds === null && !signals.some(o => box.centerX >= o.box.left && box.centerX <= o.box.right && box.centerY >= o.box.top && box.centerY <= o.box.bottom)) continue;
     timers.push({ id: `timer-${timers.length}`, kind: 'countdown', box, phase: 'UNKNOWN', score: seconds === null ? .4 : .7, source: sevenSegment === null ? 'ocr' : 'seven-segment', seconds });
   }
-  return [...signals, ...timers, ...buttonRegions(pixels, regions)];
+  return { observations: [...signals, ...timers, ...buttonRegions(pixels, regions)], diagnostics: { signalCandidates: checked } };
 }
 
 self.onmessage = async (event: MessageEvent) => {
@@ -86,8 +89,8 @@ self.onmessage = async (event: MessageEvent) => {
       session = await ort.InferenceSession.create(model, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
       self.postMessage({ type: 'ready' });
     } else if (message.type === 'frame' && session) {
-      const observations = await detect({ data: new Uint8ClampedArray(message.buffer), width: message.width, height: message.height });
-      self.postMessage({ type: 'result', timestampMs: message.timestampMs, observations, error: null });
+      const result = await detect({ data: new Uint8ClampedArray(message.buffer), width: message.width, height: message.height });
+      self.postMessage({ type: 'result', timestampMs: message.timestampMs, ...result, error: null });
     }
   } catch (error) {
     self.postMessage({ type: 'error', timestampMs: message.timestampMs ?? -Infinity, error: error instanceof Error ? error.message : 'Pedestrian detection unavailable.' });

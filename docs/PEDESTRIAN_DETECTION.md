@@ -32,6 +32,8 @@ The [Autoware Foundation pedestrian classifier](https://huggingface.co/AutowareF
 
 ## Shape estimates and buttons
 
+The [vehicle-exclusion follow-up](../artifacts/pedestrian/vehicle-exclusion-evaluation/REPORT.md) adds a post-detection silhouette gate to both YOLO predictions and fallback candidates. It verifies the lit figure rather than the housing shape, rejecting round/wide lamps and symbols without head/torso/leg evidence. Tiny blurred red figures have a separately documented coarse-evidence exception; green claims do not. Countdown candidates must also pass a dark-display-background check before digit reading. On the six supplied development images this removes all three vehicle-light false greens and the false foliage countdown while retaining the five real pedestrian signals. Both extra vehicle-light close-ups remain negative. The weights and confidence threshold are unchanged; raw YOLO predictions still contain the original errors. These are development-set results, not independent Australian accuracy validation.
+
 The GitHub model detects the supplied street green signal but misses the large product illustration. A clearly labelled colour/shape fallback locates lit pedestrian-like figures against dark surroundings in that illustration. A green colour alone is insufficient; the adapter independently checks red/green/amber pixel evidence for model detections. These checks reduce some errors and do not establish road reliability.
 
 No reusable, verified Australian pushbutton weights were found during the search. The button prototype looks for the supplied **blue plate plus silver round press-surface** arrangement. It draws both boxes and says **Possible crossing button** and **Possible press surface**. This is not a trained universal pushbutton detector. It does not cover all button designs, tactile-arrow directions, touchless units, occluded buttons, or activation confirmation. The small green confirmation ring is never interpreted as a green pedestrian signal. Camera-relative left/centre/right is descriptive; no distance or instruction to reach into the roadway is generated.
@@ -47,9 +49,10 @@ Meaningful checks include countdown boundaries, red priority, stale/future/missi
 | Check | Result |
 | --- | --- |
 | TypeScript and ESLint | Passed |
-| Unit and controller regressions | 225 passed across 28 files |
+| Unit and controller regressions | 234 passed across 28 files |
 | Production server tests | 8 passed |
-| Full demo browser suite | 79 passed, 5 intentional synthetic-camera WebKit skips |
+| Full demo browser suite | 103 passed, 5 intentional synthetic-camera WebKit skips |
+| Real street/vehicle exclusion regression cases | 24 passed: all 8 inputs in each of 3 browser profiles; included in the full suite |
 | Final reference/layout/offline/recovery checks after visual adjustments | 20 passed, 1 synthetic-camera WebKit skip; included in the same 21 scenarios as the full suite |
 | Packaged production server on local IPv4 loopback | Actual inference on street, countdown and button references, plus offline countdowns, passed in Chromium and WebKit; exact service-worker build matched and no uncaught browser errors |
 

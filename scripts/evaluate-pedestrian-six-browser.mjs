@@ -1,7 +1,8 @@
 import {chromium,expect} from '@playwright/test';
-import {readFile,writeFile} from 'node:fs/promises';
-const folder='artifacts/pedestrian/six-image-evaluation';
-const cases=JSON.parse(await readFile(`${folder}/summary.json`,'utf8'));
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
+const folder=process.argv[2]??'artifacts/pedestrian/six-image-evaluation';
+const cases=JSON.parse(await readFile(process.argv[3]??`${folder}/summary.json`,'utf8'));
+await mkdir(folder,{recursive:true});
 const browser=await chromium.launch({channel:'chrome',headless:true});
 try{
  const context=await browser.newContext({viewport:{width:1000,height:900}});
@@ -24,12 +25,12 @@ try{
  for(const sample of cases){
   await page.evaluate(()=>{window.__pedestrianResults=[];});
   await page.getByLabel('Pedestrian reference image',{exact:true}).setInputFiles(sample.input);
-  await expect(page.getByRole('status')).toHaveText('Image check complete.',{timeout:90000});
+  await expect(page.getByRole('status')).toHaveText(/^(Image check complete\.|No supported pedestrian signal, countdown or button found\.)$/,{timeout:90000});
   const scene=await page.evaluate(()=>window.__pedestrianResults.at(-1));
   expect(scene).toBeTruthy();
   const details=page.locator('details[open]');
   const policy=await details.locator('p').last().innerText();
-  const report={id:sample.id,input:sample.input,input_sha256:sample.input_sha256,observations:scene.observations,policy,errors:[...errors]};
+  const report={id:sample.id,input:sample.input,input_sha256:sample.input_sha256,observations:scene.observations,diagnostics:scene.diagnostics,policy,errors:[...errors]};
   await writeFile(`${folder}/${sample.id}-browser.json`,JSON.stringify(report,null,2));
   await page.getByTestId('pedestrian-image-result').screenshot({path:`${folder}/${sample.id}-browser.png`});
   outputs.push(report);console.log(JSON.stringify(report));

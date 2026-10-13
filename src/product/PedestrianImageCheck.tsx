@@ -17,7 +17,10 @@ export function PedestrianImageCheck() {
   const analyze = async (file?: File) => {
     if (!file) return;
     const token = ++serial.current; client.current?.dispose(); setScene(null);
-    if (!file.type.startsWith('image/') || file.size > 20 * 1024 * 1024) { setMessage('Choose an image smaller than 20 MB.'); return; }
+    // Some WebKit file pickers omit WebP's MIME type. Decoding below still
+    // validates image contents; accept a known extension for untyped files.
+    const untypedImage = (!file.type || file.type === 'application/octet-stream') && /\.(png|jpe?g|webp|gif|bmp)$/i.test(file.name);
+    if ((!file.type.startsWith('image/') && !untypedImage) || file.size > 20 * 1024 * 1024) { setMessage('Choose an image smaller than 20 MB.'); return; }
     setMessage('Loading the pedestrian detector and checking image…');
     try {
       const bitmap = await createImageBitmap(file);

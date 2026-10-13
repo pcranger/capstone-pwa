@@ -1,0 +1,350 @@
+[
+  {
+    "id": "01-road",
+    "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\Road_2022-09-12_09-42-57.webp",
+    "input_sha256": "6952f5836cdc17ee8b59be03eeb95290fc1f045f5824ffe3b9622beb39dcc1d6",
+    "observations": [
+      {
+        "id": "model-24112",
+        "kind": "signal",
+        "box": {
+          "left": 0.7212480545043946,
+          "top": 0.45628407746553423,
+          "right": 0.7536556879679362,
+          "bottom": 0.498115698993206
+        },
+        "phase": "RED",
+        "score": 0.8096665994839043,
+        "source": "pretrained"
+      }
+    ],
+    "diagnostics": {
+      "signalCandidates": [
+        {
+          "observation": {
+            "id": "model-24112",
+            "kind": "signal",
+            "box": {
+              "left": 0.7212480545043946,
+              "top": 0.45628407746553423,
+              "right": 0.7536556879679362,
+              "bottom": 0.498115698993206
+            },
+            "phase": "RED",
+            "score": 0.8096665994839043,
+            "source": "pretrained"
+          },
+          "evidence": {
+            "accepted": true,
+            "reason": "coarse-red-silhouette",
+            "width": 6,
+            "height": 13,
+            "headRatio": 0.6666666666666666,
+            "splitRows": 0
+          }
+        }
+      ]
+    },
+    "policy": "Red pedestrian signal observed. Do not start crossing.",
+    "errors": []
+  },
+  {
+    "id": "02-frome",
+    "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\Frome-Street-1200x800-2024-05-02T134052.webp",
+    "input_sha256": "0d2ffb60b089bcf495a9f55509f374bf6cd179f0beaca8bf900be90e14ab22f3",
+    "observations": [
+      {
+        "id": "model-160200",
+        "kind": "signal",
+        "box": {
+          "left": 0.598030948638916,
+          "top": 0.4262801534398099,
+          "right": 0.6596258163452149,
+          "bottom": 0.6119430059571456
+        },
+        "phase": "GREEN",
+        "score": 0.8336368279342423,
+        "source": "pretrained"
+      }
+    ],
+    "diagnostics": {
+      "signalCandidates": [
+        {
+          "observation": {
+            "id": "model-160200",
+            "kind": "signal",
+            "box": {
+              "left": 0.598030948638916,
+              "top": 0.4262801534398099,
+              "right": 0.6596258163452149,
+              "bottom": 0.6119430059571456
+            },
+            "phase": "GREEN",
+            "score": 0.8336368279342423,
+            "source": "pretrained"
+          },
+          "evidence": {
+            "accepted": true,
+            "reason": "pedestrian-silhouette",
+            "width": 25,
+            "height": 37,
+            "headRatio": 0.6470588235294118,
+            "splitRows": 9
+          }
+        }
+      ]
+    },
+    "policy": "Green pedestrian symbol observed. Crossing safety and remaining time are unverified.",
+    "errors": []
+  },
+  {
+    "id": "03-pultney",
+    "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\Pultney-Street-pedestrian-crossing-1200x800-2024-05-02T134019.webp",
+    "input_sha256": "a24829b8ba00f976e5886e8137bcbbebfc7c0f596a07e26a0cc10a84d1cb56a3",
+    "observations": [
+      {
+        "id": "model-160496",
+        "kind": "signal",
+        "box": {
+          "left": 0.5334930658340454,
+          "top": 0.43390217765432887,
+          "right": 0.6022626638412476,
+          "bottom": 0.6717045089400066
+        },
+        "phase": "RED",
+        "score": 0.8130791849057815,
+        "source": "pretrained"
+      }
+    ],
+    "diagnostics": {
+      "signalCandidates": [
+        {
+          "observation": {
+            "id": "model-160496",
+            "kind": "signal",
+            "box": {
+              "left": 0.5334930658340454,
+              "top": 0.43390217765432887,
+              "right": 0.6022626638412476,
+              "bottom": 0.6717045089400066
+            },
+            "phase": "RED",
+            "score": 0.8130791849057815,
+            "source": "pretrained"
+          },
+          "evidence": {
+            "accepted": true,
+            "reason": "pedestrian-silhouette",
+            "width": 20,
+            "height": 41,
+            "headRatio": 0.75,
+            "splitRows": 10
+          }
+        }
+      ]
+    },
+    "policy": "Red pedestrian signal observed. Do not start crossing.",
+    "errors": []
+  },
+  {
+    "id": "04-209b",
+    "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\209b.jpg",
+    "input_sha256": "b8a59bf1299bdb0f4c13d43ffb4c3bc590b365dea6978bead2e8c2f10bec9929",
+    "observations": [
+      {
+        "id": "model-30952",
+        "kind": "signal",
+        "box": {
+          "left": 0.2827052880226868,
+          "top": 0.5937713339924813,
+          "right": 0.3169775578679748,
+          "bottom": 0.6364691063761712
+        },
+        "phase": "RED",
+        "score": 0.8252312877426675,
+        "source": "pretrained"
+      }
+    ],
+    "diagnostics": {
+      "signalCandidates": [
+        {
+          "observation": {
+            "id": "model-30952",
+            "kind": "signal",
+            "box": {
+              "left": 0.2827052880226868,
+              "top": 0.5937713339924813,
+              "right": 0.3169775578679748,
+              "bottom": 0.6364691063761712
+            },
+            "phase": "RED",
+            "score": 0.8252312877426675,
+            "source": "pretrained"
+          },
+          "evidence": {
+            "accepted": true,
+            "reason": "coarse-red-silhouette",
+            "width": 4,
+            "height": 9,
+            "headRatio": 0.5,
+            "splitRows": 0
+          }
+        },
+        {
+          "observation": {
+            "id": "model-130208",
+            "kind": "signal",
+            "box": {
+              "left": 0.4069983462259976,
+              "top": 0.5025505363941193,
+              "right": 0.4605805220592776,
+              "bottom": 0.5767985045909881
+            },
+            "phase": "GREEN",
+            "score": 0.7456230021060364,
+            "source": "pretrained"
+          },
+          "evidence": {
+            "accepted": false,
+            "reason": "round-or-wide-lamp",
+            "width": 10,
+            "height": 8,
+            "headRatio": 0,
+            "splitRows": 0
+          }
+        },
+        {
+          "observation": {
+            "id": "model-158896",
+            "kind": "signal",
+            "box": {
+              "left": 0.5398205169749204,
+              "top": 0.3447742760181427,
+              "right": 0.6487025008547781,
+              "bottom": 0.4996133506298065
+            },
+            "phase": "GREEN",
+            "score": 0.43663844545426045,
+            "source": "pretrained"
+          },
+          "evidence": {
+            "accepted": false,
+            "reason": "round-or-wide-lamp",
+            "width": 21,
+            "height": 19,
+            "headRatio": 0,
+            "splitRows": 0
+          }
+        }
+      ]
+    },
+    "policy": "Red pedestrian signal observed. Do not start crossing.",
+    "errors": []
+  },
+  {
+    "id": "05-upgrade",
+    "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\traffic-signal-ugrade.jpg",
+    "input_sha256": "dd8599234d8d6265865f9b177d6e42ee443e88255b65cf80fba59d67557f3769",
+    "observations": [
+      {
+        "id": "model-157592",
+        "kind": "signal",
+        "box": {
+          "left": 0.41320792011831,
+          "top": 0.25126022696495054,
+          "right": 0.5100307596140894,
+          "bottom": 0.37500267624855044
+        },
+        "phase": "GREEN",
+        "score": 0.5248319401491557,
+        "source": "pretrained"
+      }
+    ],
+    "diagnostics": {
+      "signalCandidates": [
+        {
+          "observation": {
+            "id": "model-157592",
+            "kind": "signal",
+            "box": {
+              "left": 0.41320792011831,
+              "top": 0.25126022696495054,
+              "right": 0.5100307596140894,
+              "bottom": 0.37500267624855044
+            },
+            "phase": "GREEN",
+            "score": 0.5248319401491557,
+            "source": "pretrained"
+          },
+          "evidence": {
+            "accepted": true,
+            "reason": "pedestrian-silhouette",
+            "width": 15,
+            "height": 25,
+            "headRatio": 0.4666666666666667,
+            "splitRows": 3
+          }
+        }
+      ]
+    },
+    "policy": "Green pedestrian symbol observed. Crossing safety and remaining time are unverified.",
+    "errors": []
+  },
+  {
+    "id": "06-narellan",
+    "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\a-traffic-light-with-a-stop-sign-and-pedestrian-crossing-sign-in-narellan-new-south-wales-2HBWNP2.jpg",
+    "input_sha256": "8ee2d7de97ea1503b27874883e42bd3245ed1ddef92a61188ede3018fc556729",
+    "observations": [],
+    "diagnostics": {
+      "signalCandidates": [
+        {
+          "observation": {
+            "id": "model-156944",
+            "kind": "signal",
+            "box": {
+              "left": 0.3685036566024436,
+              "top": 0.19771571159362794,
+              "right": 0.46832887271890666,
+              "bottom": 0.3333646297454834
+            },
+            "phase": "GREEN",
+            "score": 0.8055651469907872,
+            "source": "pretrained"
+          },
+          "evidence": {
+            "accepted": false,
+            "reason": "round-or-wide-lamp",
+            "width": 28,
+            "height": 28,
+            "headRatio": 0,
+            "splitRows": 0
+          }
+        }
+      ]
+    },
+    "policy": "No pedestrian signal identified. Do not start crossing.",
+    "errors": []
+  },
+  {
+    "id": "07-round-vehicle",
+    "input": "C:\\Users\\HP\\AppData\\Local\\Temp\\codex-clipboard-704084c8-5975-440b-8488-bd280cc65cbb.png",
+    "input_sha256": "6d65afb629a022d2881eaea4ec3e4d58f51cf26ec16cc65f5fb9f463c84e32e0",
+    "observations": [],
+    "diagnostics": {
+      "signalCandidates": []
+    },
+    "policy": "No pedestrian signal identified. Do not start crossing.",
+    "errors": []
+  },
+  {
+    "id": "08-arrow-vehicle",
+    "input": "C:\\Users\\HP\\AppData\\Local\\Temp\\codex-clipboard-0c178e14-86a7-409c-a091-faed0f7e2083.png",
+    "input_sha256": "015ca54a4ee4cfa51e9ee0b238f3554dbe566baca38b2106876cb0f95a760657",
+    "observations": [],
+    "diagnostics": {
+      "signalCandidates": []
+    },
+    "policy": "No pedestrian signal identified. Do not start crossing.",
+    "errors": []
+  }
+]
