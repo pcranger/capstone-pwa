@@ -1,3 +1,19 @@
+# Current demo deployment
+
+Deployed on 13 October 2026 to https://capstone-pwa-dev.fly.dev/ using fly.dev.toml. Build revision: a86e9be26bcb. Image: registry.fly.io/capstone-pwa-dev:deployment-01M4SAF59NVJWE2A1SBGE7ZXD0.
+
+The original full version is saved in Git commit 5b92373. The separate capstone-pwa app was not deployed by this change. Google Maps configuration remains available on dev.
+
+The current build removes product cloud APIs and non-demo screens. Presenter modules are excluded from the public bundle. See DEMO_VERSION.md for scope and preparation instructions.
+
+Verification: types, lint, 199 unit tests, 8 server tests and 59 demo browser tests passed, with 4 intentional iPhone-runner synthetic-camera skips. Live deployment smoke passed exact build identity, HTTPS, settings persistence, real Google search/routes, pause/resume, detector rendering, End walk, removed endpoints and offline help. Fly HTTP health check passed.
+
+Use the normal build and the explicit fly.dev.toml deployment commands in README.md. If an already-open tab retains old menus, close the old app tabs and reopen the URL so the waiting service worker can activate. Saved places/settings are not cleared.
+
+Physical phone, screen-reader, vibration/audio and outdoor GPS checks remain manual. The separate optional presenter build has a known forced CPU-only inference failure; the default demo detector path passed local and deployed checks.
+
+## Historical full-version deployment, superseded
+
 # Fly dev deployment
 
 Dev app: **capstone-pwa-dev**. URL: https://capstone-pwa-dev.fly.dev/.

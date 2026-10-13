@@ -10,7 +10,7 @@ vi.mock('../../src/nav/nearby',()=>({reloadNearbySettings:vi.fn()}));
 vi.mock('../../src/nav/routePreferences',()=>({reloadRoutePreference:vi.fn()}));
 vi.mock('../../src/product/local/routes',()=>({localToolsRepository:{load:vi.fn()}}));
 vi.mock('../../src/product/local/recorder',()=>({reloadRecorderSettings:vi.fn(),walkingRecorder:mocks.recorder}));
-vi.mock('../../src/product/cloud/api',()=>({BACKUP_KEYS:['crosswise_settings','crosswise_local_tools_v1'],restoreBackup:mocks.restore}));
+vi.mock('../../src/product/local/backup',()=>({BACKUP_KEYS:['crosswise_settings','crosswise_local_tools_v1'],restoreBackup:mocks.restore}));
 import {importDeviceData,refreshDeviceData,requireIdleData,resetDeviceData} from '../../src/product/dataLifecycle';
 beforeEach(()=>{vi.clearAllMocks();mocks.journey.state.value={phase:'idle',busy:null,crossing:false};mocks.journey.hasJourney=false;mocks.planner.state.value.busy=null;mocks.recorder.state.value.status='idle';const values=new Map<string,string>();vi.stubGlobal('localStorage',{getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>values.set(key,value),removeItem:vi.fn((key:string)=>values.delete(key))});});
 test.each(['searching','routing','starting'])('pending journey %s blocks import and reset before any mutation',async busy=>{

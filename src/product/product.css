@@ -19,3 +19,5 @@
 @media(forced-colors:active){.cw-page select{appearance:auto;-webkit-appearance:auto;background-image:none;color-scheme:normal}}
 .cw-global-notice button{pointer-events:auto;min-height:48px}.cw-sharing{position:absolute;bottom:12px;right:12px;z-index:10;max-width:calc(100% - 24px)}.cw-sharing button{font-size:16px}.cw-content{padding-bottom:max(100px,env(safe-area-inset-bottom))}
 .cw-walk-content{display:flex;flex-direction:column}
+
+.cw-page summary{cursor:pointer;min-height:48px;padding:12px 4px;color:#9ccaff}.cw-page summary:focus-visible{outline:4px solid #ffe082;outline-offset:3px}

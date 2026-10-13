@@ -1,4 +1,4 @@
-import { validateBackup, type BackupData } from '../cloud/api';
+import { validateBackup, type BackupData } from './backup';
 import { LOCAL_TOOLS_KEY, validateLocalToolsData, type LocalToolsData } from './routes';
 import { RECORDER_SETTINGS_KEY, validateRecorderSettings, type RecorderSettings } from './recorder';
 

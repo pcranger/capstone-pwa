@@ -1,3 +1,11 @@
+# Current demo validation - 13 October 2026
+
+Types/lint passed. Unit tests: 199 passed. Server tests: 8 passed. Public demo browser tests: 59 passed, 4 intentional synthetic-camera skips. Deployed smoke and Fly health passed. Details: docs/DEMO_VERSION.md and docs/DEV_DEPLOYMENT.md.
+
+The optional presenter build has 77 distinct passing scenarios, 8 intentional media skips and 2 unresolved forced CPU-only inference failures. It is excluded from the deployed demo. Physical-device validation remains outstanding.
+
+## Historical reports
+
 # capstone_PWA verification
 
 Historical report for the 12 October baseline. The 13 October Eye Navi-style implementation, current results and remaining checks are recorded in [implementation status](docs/EYENAVI_IMPLEMENTATION_STATUS.md). The deployment observations below apply to the older main app. The current changes are deployed separately to [dev](docs/DEV_DEPLOYMENT.md).

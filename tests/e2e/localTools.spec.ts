@@ -8,7 +8,7 @@ async function home(page: Page) {
   await expect(page.getByRole('heading', { name: 'CrossWise', exact: true })).toBeVisible();
 }
 async function tool(page: Page, name: string) {
-  await page.getByRole('button', { name: 'More tools', exact: true }).click();
+  await page.getByRole('button', { name: 'Presenter setup', exact: true }).click();
   await page.getByRole('button', { name, exact: true }).click();
 }
 async function addWaypoint(page: Page, label: string, latitude: string, longitude: string, note: string) {
@@ -78,27 +78,6 @@ test('local imports preview valid content, merge collisions and reject malformed
   await page.getByRole('button', { name: 'Import and merge data', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Open Imported campus walk', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Open Collision replacement', exact: true })).toHaveCount(0);
-});
-
-test('local area pack authoring installs landmarks, persists and removes with confirmation', async ({ page }) => {
-  await home(page); await tool(page, 'Special areas');
-  await page.getByRole('button', { name: 'Create pilot area pack', exact: true }).click();
-  await page.getByLabel('Area name', { exact: true }).fill('Campus pilot');
-  await page.getByLabel('Region', { exact: true }).fill('Sydney campus');
-  await page.getByRole('button', { name: 'Add area landmark', exact: true }).click();
-  await page.getByLabel('Waypoint name', { exact: true }).fill('Reception entrance');
-  await page.getByLabel('Latitude', { exact: true }).fill('-33.86');
-  await page.getByLabel('Longitude', { exact: true }).fill('151.2');
-  await page.getByLabel('Spoken note (optional)', { exact: true }).fill('User-reviewed entrance beside pedestrian path.');
-  await page.getByRole('button', { name: 'Save waypoint', exact: true }).click();
-  await page.getByRole('button', { name: 'Save area pack', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Special-area pack', exact: true })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Reception entrance', exact: true })).toBeVisible();
-  await page.reload(); await tool(page, 'Special areas');
-  await page.getByRole('button', { name: 'Open Campus pilot', exact: true }).click();
-  await page.getByRole('button', { name: 'Remove area pack', exact: true }).click();
-  await page.getByRole('button', { name: 'Confirm remove pack', exact: true }).click();
-  await expect(page.getByText('No area packs installed.', { exact: true })).toBeVisible();
 });
 
 test('local recorder uses actual MediaRecorder, persists playable protected video and exports it', async ({ page, browserName }) => {
@@ -206,8 +185,8 @@ test('local global data mutation is blocked during an authored navigation journe
   });
   await home(page); await tool(page, 'My Routes'); await createRoute(page);
   await page.getByRole('button', { name: 'Start My Route', exact: true }).click();
-  await page.getByRole('button', { name: 'Tools', exact: true }).click();
-  await page.getByRole('button', { name: 'Data management', exact: true }).click();
+  await page.getByRole('button', { name: 'Home', exact: true }).click();
+  await tool(page, 'Data management');
   await expect(page.getByRole('button', { name: 'Import local backup', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Delete all My Routes', exact: true })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Delete all local application data', exact: true })).toBeDisabled();
@@ -259,4 +238,23 @@ test('local recorder unsupported capability keeps library accessible without a f
   await expect(page.getByRole('button', { name: 'Start recording', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: 'Recording library', exact: true }).click();
   await expect(page.getByText('No saved recordings.', { exact: false })).toBeVisible();
+});
+
+async function back(page:Page){await page.getByRole('button',{name:'‹ Back',exact:true}).click();}
+test('leaving an authored route awaiting GPS cancels the late start before data changes',async({page})=>{
+ await home(page);
+ // Install this fixture in the loaded page. The Windows WebKit runner can
+ // discard navigator overrides and early storage writes during navigation.
+ await page.evaluate(()=>{
+  localStorage.setItem('crosswise_local_tools_v1',JSON.stringify({version:1,routes:[{id:'slow',name:'Slow GPS route',updatedAt:1,waypoints:[{id:'a',label:'Gate',latitude:-33.86,longitude:151.2,note:''},{id:'b',label:'Library',latitude:-33.8601,longitude:151.2001,note:''}]}],areas:[]}));
+  Object.defineProperty(navigator,'geolocation',{configurable:true,value:{getCurrentPosition:(success:PositionCallback)=>{(window as unknown as {releaseGPS:()=>void}).releaseGPS=()=>success({coords:{latitude:-33.86,longitude:151.2,accuracy:5,altitude:null,altitudeAccuracy:null,heading:null,speed:null},timestamp:Date.now()} as GeolocationPosition);},watchPosition:()=>1,clearWatch:()=>{}}});
+ });
+ await page.getByRole('button',{name:'Presenter setup',exact:true}).click();await page.getByRole('button',{name:'My Routes',exact:true}).click();
+ await page.getByRole('button',{name:'Open Slow GPS route',exact:true}).click();await page.getByRole('button',{name:'Start My Route',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>typeof (window as unknown as {releaseGPS?:()=>void}).releaseGPS)).toBe('function');
+ await back(page);await back(page);await page.getByRole('button',{name:'Data management',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Delete all local application data',exact:true})).toBeEnabled();
+ await page.evaluate(()=>(window as unknown as {releaseGPS:()=>void}).releaseGPS());
+ await expect(page.getByRole('heading',{name:'Data management',exact:true})).toBeVisible();await back(page);await back(page);
+ await expect(page.getByRole('heading',{name:'CrossWise',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:/Return to walk:/})).toHaveCount(0);
 });

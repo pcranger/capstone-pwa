@@ -1,3 +1,5 @@
+> Historical: applies to the full version at commit 5b92373. Cloud product services are removed from the demo. See DEMO_VERSION.md.
+
 # CrossWise cloud tools: implementation and operation
 
 The app includes account, backup, location sharing, check-in and photo-question screens. Local navigation and file backup work without an account. Service availability is read from `/api/product/capabilities`; missing configuration produces an explanation rather than a successful-looking demo.

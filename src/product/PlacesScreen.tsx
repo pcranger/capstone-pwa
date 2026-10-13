@@ -125,7 +125,7 @@ export function PlacesScreen({ onBack, onWalk, intent = 'navigate', onMyRoutes, 
       {home && <><Row label="Confirm Home" detail={home.point ? coordinateText(home.point) : 'Saved provider place'} onClick={() => resolve(home)} /><Row label="Edit Home" onClick={() => { setEntryId(home.placeId); setFlow('home'); void run(async signal => repo.getCandidate(home.placeId) ?? await placeDetails(home.placeId, services.mapsRestApiKey, signal), p => { setSelected(p); coordinates(p.point); setOriginalPoint(p.point); setAlias(placeName(home)); setView('edit'); }); }} /><Row label="Delete Home" onClick={() => { setEntryId(home.placeId); setConfirmDelete(true); }} /></>}
       <Action disabled={busy || saved.status !== 'ready'} onClick={() => capture('home')}>Register current location</Action>
       <Action secondary disabled={busy} onClick={() => openSearch('home')}>Register by address</Action>
-      <Action secondary onClick={() => manual('home')}>Enter Home coordinates</Action>
+      <details><summary>Advanced location editing</summary><Action secondary onClick={() => manual('home')}>Enter Home coordinates</Action></details>
     </>}
     {view === 'list' && <>
       <p>{destinations.length} of {DESTINATION_CAPACITY} destinations · Home has a separate slot.</p>
@@ -133,7 +133,7 @@ export function PlacesScreen({ onBack, onWalk, intent = 'navigate', onMyRoutes, 
       {home ? <Row label={`Home — ${placeName(home)}`} detail="Confirm destination before starting" onClick={() => resolve(home)} /> : <Row label="Register Home" detail="Set your home entrance" onClick={() => go('home')} />}
       <Action disabled={busy} onClick={() => openSearch(intent === 'manage' ? 'save' : 'navigate')}>{intent === 'manage' ? 'Search and register' : 'Search destination'}</Action>
       <Action secondary disabled={busy || saved.status !== 'ready' || destinations.length >= DESTINATION_CAPACITY} onClick={() => capture('save')}>Register current location</Action>
-      <Action secondary onClick={() => manual('save')}>Enter destination coordinates</Action>
+      <details><summary>Advanced location editing</summary><Action secondary onClick={() => manual('save')}>Enter destination coordinates</Action></details>
       <label className="cw-field">Sort destinations<select value={sort} onChange={e => { const next = e.target.value as 'recent' | 'name'; try { localStorage.setItem('crosswise_places_sort', next); setSort(next); } catch { setError('Could not save the sorting preference.'); } }}><option value="recent">Recently saved</option><option value="name">Name</option></select></label>
       <h2>{all ? 'All destinations' : 'Recently saved'}</h2>
       {!!destinations.length && <Action secondary onClick={() => setShowSavedMap(v => !v)}>{showSavedMap ? 'Show saved destination list' : 'Show saved locations on map'}</Action>}

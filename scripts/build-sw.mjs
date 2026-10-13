@@ -1,6 +1,6 @@
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
-const root = new URL("../dist/", import.meta.url);
+const root = new URL(process.argv[2] ?? "../dist/", import.meta.url);
 async function files(dir, prefix = "") {
   const entries = await readdir(dir, { withFileTypes: true });
   return (

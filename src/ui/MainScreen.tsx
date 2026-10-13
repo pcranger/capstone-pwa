@@ -1,3 +1,4 @@
+import { PRESENTER_TOOLS } from '../product/demoScope';
 import { useEffect, useRef, useState } from 'react';
 import { MaterialIcons } from '../platform/icons';
 import { DeveloperTelemetry } from './DeveloperTelemetry';
@@ -45,7 +46,7 @@ export function MainScreen({ height, topInset = 0, bottomInset = 0, hidden = fal
     } else lastTap.current = now;
   };
   useEffect(() => { const timer = setInterval(() => tick(v => v + 1), 1_000); return () => clearInterval(timer); }, []);
-  const developer = settings.interfaceMode === InterfaceMode.DEVELOPER;
+  const developer = PRESENTER_TOOLS && settings.interfaceMode === InterfaceMode.DEVELOPER;
   const assistOn = ui.snapshot.mode !== AssistMode.IDLE;
   const fresh = camera === 'running' && controller.hasRecentFrame;
   const routeOnly = journey.phase === 'walking' && !journey.crossing;
@@ -64,7 +65,7 @@ export function MainScreen({ height, topInset = 0, bottomInset = 0, hidden = fal
   if (hazard && assistOn) status = S.hazardBanner(hazard.side === Side.LEFT ? S.sideLeft : hazard.side === Side.RIGHT ? S.sideRight : S.sideAhead);
   let unavailable: string | null = null;
   if (!hasPermission) unavailable = 'Camera permission is off. Route guidance remains available.';
-  else if (model.kind !== 'ready') unavailable = model.kind === 'loading' ? 'Loading detection…' : 'Detection unavailable. Check the model in Settings → Developer.';
+  else if (model.kind !== 'ready') unavailable = model.kind === 'loading' ? 'Loading detection…' : 'Detection unavailable. Open Help to check camera permissions and try again.';
   else if (camera !== 'running' || !fresh) unavailable = perceptionMessage(camera,fresh,pipeline,nowMs());
   else if (assistOn && ui.frameBrightness < 0.04) unavailable = 'Camera blocked or too dark. Check the lens.';
   else if (assistOn && ui.frameBrightness < 0.12) unavailable = 'Too dark. Improve the camera view.';

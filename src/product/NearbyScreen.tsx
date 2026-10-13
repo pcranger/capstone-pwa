@@ -4,13 +4,15 @@ import { PlaceMap } from './PlaceMap';
 import { currentLocation } from './location';
 import { useStore } from '../state/store';
 import { controller } from '../state/controller';
-import { nearbySettings, setNearbySettings, NEARBY_RADII, NEARBY_GENRES, nearbyPlaces, type NearbyPlace } from '../nav/nearby';
+import { nearbySettings, setNearbySettings, DEMO_NEARBY_GENRES, demoNearbySettings, nearbyPlaces, type NearbyPlace } from '../nav/nearby';
+const demoGenres=DEMO_NEARBY_GENRES;
 import type { PlaceCandidate } from '../nav/navigation';
 
 export function NearbyScreen({ onBack, onNavigate, initialView = 'list' }: { onBack: () => void; onNavigate?: (place: PlaceCandidate) => void; initialView?: 'list' | 'settings' }) {
-  const settings = useStore(nearbySettings);
+  const storedSettings = useStore(nearbySettings);
+  const settings = demoNearbySettings(storedSettings);
   const saved = useStore(controller.savedPlaces.state);
-  const [view, setView] = useState<'list' | 'settings' | 'genre' | 'detail'>(initialView), [genre, setGenre] = useState(NEARBY_GENRES[0]);
+  const [view, setView] = useState<'list' | 'settings' | 'detail'>(initialView);
   const [places, setPlaces] = useState<NearbyPlace[]>([]), [selected, setSelected] = useState<NearbyPlace | null>(null);
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [status, setStatus] = useState(''), [checkedAt, setCheckedAt] = useState<number | null>(null);
   const request = useRef<AbortController | null>(null), generation = useRef(0);
@@ -27,38 +29,32 @@ export function NearbyScreen({ onBack, onNavigate, initialView = 'list' }: { onB
   };
   useEffect(() => { ++generation.current; request.current?.abort(); setBusy(false); setPlaces([]); setCheckedAt(null); }, [settingsKey]);
   useEffect(() => () => { ++generation.current; request.current?.abort(); }, []);
-  const update = (patch: Parameters<typeof setNearbySettings>[0]) => { try { setNearbySettings(patch); if(patch.radius===0)controller.stopVoice(); setError(''); } catch { setError('Could not save nearby settings. Your previous choices are unchanged.'); } };
-  const toggle = (id: string, enabled: boolean) => update({ enabled: enabled ? [...settings.enabled,id] : settings.enabled.filter(i => i !== id) });
-  const back = () => { if (view === 'genre') setView('settings'); else if (view === 'detail') setView('list'); else if (view === 'settings' && initialView !== 'settings') setView('list'); else if(view === 'list' && initialView === 'settings')setView('settings'); else onBack(); };
+  const update = (patch: Parameters<typeof setNearbySettings>[0]) => { try { setNearbySettings({enabled:settings.enabled,...patch}); if(patch.radius===0)controller.stopVoice(); setError(''); } catch { setError('Could not save nearby settings. Your previous choices are unchanged.'); } };
+  const back = () => { if (view === 'detail') setView('list'); else if (view === 'settings' && initialView !== 'settings') setView('list'); else if(view === 'list' && initialView === 'settings')setView('settings'); else onBack(); };
   useProductBack(view !== initialView, back);
   const read = () => {
     controller.stopVoice();
     if (!places.length) { controller.sayNavigation('No nearby facilities in the current results. Refresh to search.',80); return; }
     controller.sayNavigation(places.map(p => `${p.name}, ${Math.round(p.distance)} metres ${p.direction}.`).join(' '),80);
   };
-  return <Page title={view === 'genre' ? genre.label : view === 'detail' ? selected?.name ?? 'Nearby place' : view === 'settings' ? 'Nearby facilities' : 'Nearby places'} onBack={back}>
+  return <Page title={view === 'detail' ? selected?.name ?? 'Nearby place' : view === 'settings' ? 'Nearby facilities' : 'Nearby places'} onBack={back}>
     {error && <Notice error>{error}</Notice>}
     {status && <Notice>{status}</Notice>}
     {view === 'settings' && <>
-      <fieldset><legend>Announcement and search radius</legend>{NEARBY_RADII.map(radius => <label className="cw-radio" key={radius}><input type="radio" name="nearby-radius" checked={radius === settings.radius} onChange={() => update({ radius })} />{radius ? `${radius} metres` : 'None — stop nearby searches'}</label>)}</fieldset>
-      <p>This is a straight-line radius. Provider results are limited and may omit facilities. Clock directions require a reliable heading; this version gives compass directions.</p>
-      <h2>Genres</h2>{NEARBY_GENRES.map(g => <Row key={g.id} label={g.label} detail={`${g.children.filter(c => settings.enabled.includes(c.id)).length} of ${g.children.filter(c => c.types.length).length} supported types on`} onClick={() => { setGenre(g); setView('genre'); }} />)}
+      <fieldset><legend>Announcement and search radius</legend>{[...new Set([0,50,100,200,settings.radius])].sort((a,b)=>a-b).map(radius => <label className="cw-radio" key={radius}><input type="radio" name="nearby-radius" checked={radius === settings.radius} onChange={() => update({ radius })} />{radius ? `${radius} metres` : 'None — stop nearby searches'}</label>)}</fieldset>
+      <p>This is a straight-line radius. Provider results are limited and may omit facilities. Results use compass directions, not directions relative to your body.</p>
+      <h2>Categories</h2>{demoGenres.map(g=><label className="cw-switch" key={g.id}><span>{g.label}</span><input type="checkbox" role="switch" checked={g.children.some(c=>settings.enabled.includes(c.id))} onChange={e=>{const ids=g.children.filter(c=>c.types.length).map(c=>c.id);const retained=settings.enabled.filter(id=>demoGenres.some(group=>group.children.some(c=>c.id===id))&&!ids.includes(id));update({enabled:e.target.checked?[...retained,...ids]:retained});}}/></label>)}
+
       <Action onClick={() => setView('list')}>View nearby places</Action>
-    </>}
-    {view === 'genre' && <>
-      <div className="cw-actions"><Action onClick={() => update({ enabled: [...new Set([...settings.enabled,...genre.children.filter(c => c.types.length).map(c => c.id)])] })}>All on</Action><Action secondary onClick={() => update({ enabled: settings.enabled.filter(id => !genre.children.some(c => c.id === id)) })}>All off</Action></div>
-      {genre.children.map(c => <label className="cw-switch" key={c.id}><span>{c.label}{!c.types.length && <small>No precise provider category. Select a specific useful-place category instead.</small>}</span><input type="checkbox" role="switch" disabled={!c.types.length} checked={settings.enabled.includes(c.id)} onChange={e => toggle(c.id,e.target.checked)} /></label>)}
-      {genre.id === 'dining' && <p>Other dining excludes the three separately named dining categories.</p>}
-      <Action secondary onClick={() => setView('settings')}>Back to nearby facilities</Action>
     </>}
     {view === 'list' && <>
       <Notice>{!settings.radius ? 'Nearby facilities are off. Choose a radius to search.' : !settings.enabled.length ? 'All facility categories are off.' : `Search within ${settings.radius} metres. Location is requested only when you refresh.`}</Notice>
       <Action disabled={busy || !settings.radius || !settings.enabled.length} onClick={() => { void refresh(); }}>{busy ? 'Finding nearby facilities…' : 'Refresh nearby places'}</Action>
       {busy && <Action secondary onClick={() => { ++generation.current; request.current?.abort(); setBusy(false); }}>Cancel search</Action>}
-      <Action secondary onClick={() => setView('settings')}>Radius and genres</Action>
+      <Action secondary onClick={() => setView('settings')}>Radius and categories</Action>
       {!!places.length && <><Action secondary onClick={read}>Read nearby places</Action><Action secondary onClick={() => controller.stopVoice()}>Stop reading</Action></>}
       {checkedAt && <p>Results checked {new Date(checkedAt).toLocaleTimeString()}. Up to 20 provider results; distances are straight line.</p>}
-      {checkedAt && !places.length && <Notice>No matching facilities found in this radius. Increase the radius or change genres.</Notice>}
+      {checkedAt && !places.length && <Notice>No matching facilities found in this radius. Increase the radius or change categories.</Notice>}
       {places.map((p,i) => <Row key={p.id} label={`${i + 1}. ${p.name}`} detail={`${Math.round(p.distance)} metres ${p.direction} · ${p.address}`} onClick={() => { setSelected(p); setView('detail'); }} />)}
       {!!places.length && <p>Google Maps</p>}
     </>}

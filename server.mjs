@@ -3,7 +3,6 @@ import {createReadStream,existsSync} from 'node:fs';
 import {stat} from 'node:fs/promises';
 import {resolve,extname,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {createAdvancedHandler} from './server-advanced.mjs';
 
 const root=resolve(fileURLToPath(new URL('./dist/',import.meta.url)));
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png','.svg':'image/svg+xml','.ttf':'font/ttf','.woff2':'font/woff2','.bin':'application/octet-stream'};
@@ -14,14 +13,12 @@ const buckets=new Map();
 function reply(res,status,value){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(value));}
 async function bodyOf(req){let text='';for await(const chunk of req){text+=chunk;if(Buffer.byteLength(text)>16384)throw new Error('Body too large');}return JSON.parse(text);}
 function point(p){return p&&Number.isFinite(p.latitude)&&Number.isFinite(p.longitude)&&Math.abs(p.latitude)<=90&&Math.abs(p.longitude)<=180;}
-export function createApp({mapsKey=process.env.GOOGLE_MAP_API_KEY??'',browserMapsKey=process.env.GOOGLE_MAPS_BROWSER_KEY??'',upstream=fetch,advancedOptions={}}={}){
- const advanced=createAdvancedHandler({upstream,...advancedOptions});
+export function createApp({mapsKey=process.env.GOOGLE_MAP_API_KEY??'',browserMapsKey=process.env.GOOGLE_MAPS_BROWSER_KEY??'',upstream=fetch}={}){
  return createServer(async(req,res)=>{
   res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy','camera=(self), microphone=(self), geolocation=(self)');
   try{
    const url=new URL(req.url,'http://localhost');
-   if(await advanced(req,res,url))return;
    if(url.pathname==='/healthz'){reply(res,200,{ready:existsSync(resolve(root,'index.html'))});return;}
    if(url.pathname==='/api/config'){reply(res,200,{mapsProxyEnabled:!!mapsKey,mapsBrowserKey:browserMapsKey});return;}
    if(url.pathname.startsWith('/api/maps/')){

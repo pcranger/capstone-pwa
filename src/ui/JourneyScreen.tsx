@@ -1,3 +1,4 @@
+import { PRESENTER_TOOLS } from '../product/demoScope';
 import { useEffect, useState } from 'react';
 import { MaterialIcons } from '../platform/icons';
 import { BackHandler, Keyboard, PanResponder, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -69,7 +70,7 @@ export function JourneyScreen({ onSettings, hidden, hasPermission, canRequestPer
       onLayout={event => setHeaderHeight(event.nativeEvent.layout.height)}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' }}>
       <Text style={[type.titleMedium, { flex: 1 }]} maxFontSizeMultiplier={1.3} accessibilityRole="header">
-        {settings.interfaceMode === InterfaceMode.DEVELOPER ? 'CrossWise · Developer' : 'CrossWise'}
+        {PRESENTER_TOOLS && settings.interfaceMode === InterfaceMode.DEVELOPER ? 'CrossWise · Developer' : 'CrossWise'}
       </Text>
       <VoiceControl onHelp={onSettings} />
       <IconPill icon="settings" label="Settings" onPress={onSettings} />
@@ -105,7 +106,7 @@ export function JourneyScreen({ onSettings, hidden, hasPermission, canRequestPer
     <View style={[styles.dock, mapOpen && { opacity: 0 }]} pointerEvents={mapOpen ? 'none' : 'auto'}
       accessibilityElementsHidden={mapOpen} importantForAccessibility={mapOpen ? 'no-hide-descendants' : 'auto'}
       onLayout={event => setDockHeight(event.nativeEvent.layout.height)}>
-      <ScrollView style={{ maxHeight: height * 0.3 }}><JourneyControls stacked={window.fontScale > 1.3} compact={settings.interfaceMode === InterfaceMode.USER} /></ScrollView>
+      <ScrollView style={{ maxHeight: height * 0.3 }}><JourneyControls stacked={window.fontScale > 1.3} compact={PRESENTER_TOOLS && settings.interfaceMode === InterfaceMode.USER} /></ScrollView>
       <Pressable accessibilityRole="button" accessibilityLabel="Show map" accessibilityState={{ expanded: mapOpen }}
         onPress={() => setMapOpen(true)} style={styles.mapToggle}>
         <MaterialIcons name="keyboard-arrow-up" size={28} color={Colors.OnSurface} />

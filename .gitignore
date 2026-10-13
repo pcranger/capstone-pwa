@@ -8,3 +8,9 @@ cloud-test-results/
 artifacts/*-build.log
 .env*
 cloud-*-results/
+
+dist-presenter/
+
+playwright-report-presenter/
+
+demo-check.log

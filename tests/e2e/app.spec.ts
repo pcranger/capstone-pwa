@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 test.beforeEach(async ({ page, browserName }, info) => {
-  // These regression cases exercise the retained walking UI with opt-in Stroll startup.
+  // These regression cases explicitly open Stroll and the optional presenter tools.
   await page.addInitScript(() => {
     if (!localStorage.getItem('crosswise_product_preferences_v1'))
       localStorage.setItem('crosswise_product_preferences_v1', JSON.stringify({version:1,autoStroll:true,termsVersion:'2026-10-13'}));
@@ -22,12 +22,14 @@ test.beforeEach(async ({ page, browserName }, info) => {
     };
   });
   await page.goto("/");
+  const agree=page.getByRole('button',{name:'Agree and continue',exact:true});if(await agree.count())await agree.click();
+  await page.getByRole('button',{name:'Stroll',exact:true}).click();
   if(info.title.startsWith('live ')&&browserName!=='webkit')await allowCamera(page);
 });
 async function allowCamera(page:Page){await page.getByRole('button',{name:'Allow camera',exact:true}).click();}
 async function settings(page: Page) {
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByRole('button', {name:'Advanced',exact:false}).click();
+  await page.getByRole('button', {name:'Presenter setup',exact:false}).click();await page.getByRole('button', {name:'Advanced',exact:true}).click();
 }
 async function noOverflow(page: Page) {
   expect(
@@ -99,7 +101,7 @@ test("settings preserves the original sections and collapsed disclosures", async
   await expect(precautions).toHaveAttribute("aria-expanded", "true");
   await precautions.click();
   await page.getByRole("button", { name: "Back", exact: true }).click();
-  await page.getByRole('button', {name:'‹ Back',exact:true}).click();
+  await page.getByRole('button', {name:'‹ Back',exact:true}).click();await page.getByRole('button', {name:'‹ Back',exact:true}).click();
   await expect(
     page.getByRole("button", { name: "Settings", exact: true }),
   ).toBeVisible();
@@ -130,26 +132,13 @@ test("guide and practice return to Settings and keep home controls intact", asyn
     .getByRole("button", { name: "Back to Settings", exact: true })
     .click();
   await page.getByRole("button", { name: "Back", exact: true }).click();
-  await page.getByRole('button', {name:'‹ Back',exact:true}).click();
+  await page.getByRole('button', {name:'‹ Back',exact:true}).click();await page.getByRole('button', {name:'‹ Back',exact:true}).click();
   await expect(
     page.getByRole("button", { name: "Hide controls", exact: true }),
   ).toBeVisible();
 });
 test("phone Back follows the screen hierarchy", async ({ page }) => {
-  await settings(page);
-  await page
-    .getByRole("button", { name: "Practice the cues", exact: true })
-    .click();
-  await page.goBack();
-  await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeVisible();
-  await page.goBack();
-  await expect(
-    page.getByRole("heading", { name: "Settings", exact: true }),
-  ).toBeVisible();
-  await page.goBack();
-  await expect(
-    page.getByRole("button", { name: "Settings", exact: true }),
-  ).toBeVisible();
+ await settings(page);await page.getByRole('button',{name:'Practice the cues',exact:true}).click();await page.goBack();await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeVisible();await page.goBack();await expect(page.getByRole('heading',{name:'Presenter setup',exact:true})).toBeVisible();await page.goBack();await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeVisible();await page.goBack();await expect(page.getByRole('button',{name:'Settings',exact:true})).toBeVisible();
 });
 test("map drawer expands, searches truthfully, and returns to camera", async ({
   page,
@@ -200,6 +189,7 @@ test("preferences persist and developer mode exposes original tools", async ({
     page.getByRole("heading", { name: "VEHICLE BOXES", exact: true }),
   ).toBeVisible();
   await page.reload();
+  await page.getByRole("button", { name: "Stroll", exact: true }).click();
   await settings(page);
   await expect(
     page.getByRole("switch", { name: "Speech", exact: true }),
@@ -222,6 +212,7 @@ test("voice failure offers the same recovery and help navigation", async ({
     });
   });
   await page.reload();
+  await page.getByRole("button", { name: "Stroll", exact: true }).click();
   await page.getByRole("button", { name: "Voice", exact: true }).click();
   await expect(
     page
@@ -273,6 +264,7 @@ test("offline reload includes original phone screens and all model shards", asyn
   });
   await context.setOffline(true);
   await page.reload();
+  await page.getByRole("button", { name: "Stroll", exact: true }).click();
   await settings(page);
   await page
     .getByRole("button", { name: "Practice the cues", exact: true })
@@ -349,7 +341,7 @@ test("live camera runs local detection and preserves crossing through overlays",
   const video = await page.locator("video").evaluateHandle((v) => v);
   await settings(page);
   await page.getByRole("button", { name: "Back", exact: true }).click();
-  await page.getByRole('button', {name:'‹ Back',exact:true}).click();
+  await page.getByRole('button', {name:'‹ Back',exact:true}).click();await page.getByRole('button', {name:'‹ Back',exact:true}).click();
   expect(
     await page
       .locator("video")
@@ -391,6 +383,7 @@ test("live offline camera inference reloads from the PWA cache", async ({
   });
   await context.setOffline(true);
   await page.reload();
+  await page.getByRole("button", { name: "Stroll", exact: true }).click();
   await allowCamera(page);
   await page
     .getByRole("button", { name: "More controls", exact: true })
@@ -462,6 +455,7 @@ test.describe("model download recovery", () => {
       r.fulfill({ status: 503, body: "Unavailable" }),
     );
     await page.reload();
+    await page.getByRole("button", { name: "Stroll", exact: true }).click();
     await allowCamera(page);
     await expect(
       page.getByRole("button", { name: "Retry camera", exact: true }),
@@ -520,6 +514,7 @@ test.describe('configured route integration',()=>{
  // This WebKit runner restores its native location object during reload, so
  // reinstall the same fixture in the loaded main world before route actions.
  await page.evaluate(installRouteLocation);
+ await page.getByRole('button',{name:'Stroll',exact:true}).click();
  await page.getByRole('button',{name:'More controls',exact:true}).click();await page.getByRole('button',{name:'Show map',exact:true}).click();await page.getByRole('textbox',{name:'Destination name and suburb',exact:true}).fill('Test Library Sydney');await page.getByRole('button',{name:'Search places',exact:true}).click();await page.getByRole('button',{name:/^1\. Test Library/}).click();await page.getByRole('button',{name:'Confirm place',exact:true}).click();await page.getByRole('button',{name:'Start journey',exact:true}).click();
  await expect(page.getByRole('button',{name:'Pause',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Close full-screen map',exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'Pause',exact:true}).click();await expect(page.getByRole('button',{name:'Resume',exact:true})).toBeVisible();await page.getByRole('button',{name:'Resume',exact:true}).click();await expect(page.getByRole('button',{name:'Pause',exact:true})).toBeVisible();await page.getByRole('button',{name:'Pause',exact:true}).click();await page.getByRole('button',{name:'End journey',exact:true}).click();await expect(page.getByRole('button',{name:'Start camera assistance',exact:true})).toBeVisible();
@@ -534,6 +529,7 @@ for(const cpu of [false,true]) test(`live ${cpu?'CPU option':'WebGPU unavailable
   else Object.defineProperty(navigator,'gpu',{value:undefined,configurable:true});
  },{cpu});
  await page.reload();
+ await page.getByRole('button',{name:'Stroll',exact:true}).click();
  await allowCamera(page);
  await page.getByRole('button',{name:'More controls',exact:true}).click();
  await expect.poll(async()=>{await page.getByRole('button',{name:'Start camera assistance',exact:true}).click();return page.getByRole('button',{name:'I’m crossing',exact:true}).count();},{timeout:45000,intervals:[1000]}).toBe(1);
@@ -555,6 +551,7 @@ test('live iPhone texture workaround preserves portrait and landscape frame orie
   };
  });
  await page.reload();
+ await page.getByRole('button',{name:'Stroll',exact:true}).click();
  await allowCamera(page);
  const canvas=page.locator('canvas[data-camera-renderer]');
  await expect(canvas).toHaveAttribute('data-camera-source','oriented-canvas');

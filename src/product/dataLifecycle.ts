@@ -5,7 +5,7 @@ import { reloadNearbySettings } from '../nav/nearby';
 import { reloadRoutePreference } from '../nav/routePreferences';
 import { localToolsRepository } from './local/routes';
 import { reloadRecorderSettings, walkingRecorder } from './local/recorder';
-import { BACKUP_KEYS, restoreBackup } from './cloud/api';
+import { BACKUP_KEYS, restoreBackup } from './local/backup';
 
 export function requireIdleData():void {
   const journey=controller.journey.state.value;

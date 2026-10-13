@@ -21,3 +21,11 @@ test('nearby is allowlisted, bounded, attributed, no-store and rejects arbitrary
  incoming.includedTypes=['arbitrary'];assert.equal((await fetch(url+'/api/maps/nearby',{method:'POST',body:JSON.stringify(incoming)})).status,400);
  incoming.includedTypes=['restaurant'];incoming.locationRestriction.circle.radius=0;assert.equal((await fetch(url+'/api/maps/nearby',{method:'POST',body:JSON.stringify(incoming)})).status,400);assert.equal(calls,1);
 });
+
+
+test('demo server has no account, sharing, photo or backup endpoints',async t=>{
+ const url=await fixture(t,{});
+ for(const path of ['/api/product/capabilities','/api/product/account','/api/product/login','/api/product/backup','/api/product/shares','/api/product/questions']){
+  const response=await fetch(url+path,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});assert.equal(response.status,404);assert.deepEqual(await response.json(),{error:'Unknown endpoint.'});
+ }
+});

@@ -14,6 +14,8 @@ export const NEARBY_GENRES = [
   { id: 'accommodation', label: 'Accommodation', children: [child('accommodation-hotels','Hotels',['hotel']),child('accommodation-other','Other lodging',['lodging'])] },
   { id: 'everyday', label: 'Everyday services', children: [child('everyday-toilets','Toilets',['public_bathroom']),child('everyday-laundries','Laundries',['laundry']),child('everyday-personal','Personal services',['hair_salon']),child('everyday-other','Other useful places',[])] },
 ];
+export const DEMO_NEARBY_GENRES = NEARBY_GENRES.filter(g=>['dining','transport','health','public'].includes(g.id));
+export function demoNearbySettings(settings:NearbySettings):NearbySettings{return {...settings,enabled:settings.enabled.filter(id=>DEMO_NEARBY_GENRES.some(g=>g.children.some(c=>c.id===id)))};}
 export interface NearbySettings { radius: number; enabled: string[] }
 export const NEARBY_KEY = 'crosswise_nearby_v1';
 const all = NEARBY_GENRES.flatMap(g => g.children);

@@ -9,7 +9,7 @@ import { localToolsRepository, localId, duplicateRoute, parseLocalToolsFile, rou
 import { recorderSettings, saveRecorderSettings, reloadRecorderSettings, DEFAULT_RECORDER_SETTINGS, walkingRecorder, recordingMime, validateRecorderSettings, type RecorderSettings } from './local/recorder';
 import { recordingStorage, type RecordingMeta } from './local/recordingStore';
 import { combinedLocalBackup, mergedLocalTools } from './local/dataPackage';
-import { validateBackup } from './cloud/api';
+import { validateBackup } from './local/backup';
 
 type CoordinatePlace = GeoPoint & { name: string };
 export interface LocalToolsScreenProps {

@@ -1,3 +1,5 @@
+> Current demo scope and verification: DEMO_VERSION.md. The coverage below records the full version saved at 5b92373 before simplification.
+
 # Eye Navi-style CrossWise implementation
 
 13 October 2026. Implemented in the local `capstone-pwa` checkout and subsequently deployed, at the user's request, to the separate [Fly dev app](https://capstone-pwa-dev.fly.dev/). See [deployment record](DEV_DEPLOYMENT.md). This record distinguishes usable PWA behavior from services/hardware that require configuration or physical-device validation. The source research, original screenshots, detailed screen specification and voice specification remain in the companion documents.

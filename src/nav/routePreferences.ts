@@ -8,7 +8,7 @@ export const ROUTE_PREFERENCES = [
 ] as const;
 export type RoutePreference = typeof ROUTE_PREFERENCES[number]['id'];
 const KEY = 'crosswise_route_preference';
-function initial(): RoutePreference { try { const raw = localStorage.getItem(KEY); return ROUTE_PREFERENCES.some(p => p.id === raw) ? raw as RoutePreference : 'distance'; } catch { return 'distance'; } }
+function initial(): RoutePreference { try { const raw = localStorage.getItem(KEY); return ROUTE_PREFERENCES.some(p => p.id === raw && p.supported) ? raw as RoutePreference : 'distance'; } catch { return 'distance'; } }
 export const routePreference = new Store<RoutePreference>(initial());
 export function reloadRoutePreference(): void { routePreference.set(initial()); }
 export function setRoutePreference(preference: RoutePreference): void {

@@ -13,7 +13,7 @@
     "test:e2e": "playwright test",
     "check": "npm run typecheck && npm run lint && npm test && npm run build && npm run test:server && npm run test:e2e",
     "start": "node server.mjs",
-    "test:server": "node --test tests/server.test.mjs tests/server-advanced.test.mjs"
+    "test:server": "node --test tests/server.test.mjs"
   },
   "dependencies": {
     "@tensorflow-models/coco-ssd": "^2.2.3",
