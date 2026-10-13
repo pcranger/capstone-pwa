@@ -1,0 +1,47 @@
+{
+  "input": "C:\\Users\\HP\\AppData\\Local\\Temp\\codex-clipboard-84746c96-d4ef-42ae-b16e-ffc651adcc5c.png",
+  "input_sha256": "6bc6befd4371c103deabdd293cd3c9bd3ec356f1bb7ebfc947deb1ac8f2c3aa6",
+  "image_size": [
+    1080,
+    721
+  ],
+  "model_sha256": "96437c2080a0ba5364f438b41c8551e310e9761cf998c74856d42b748d357b42",
+  "input_tensor": [
+    1,
+    3,
+    640,
+    640
+  ],
+  "confidence_threshold": 0.35,
+  "detections": [
+    {
+      "class": "G_Signal",
+      "confidence": 0.7236329913139343,
+      "box_xyxy": [
+        502.8882751464844,
+        255.08851623535156,
+        583.0848999023438,
+        409.4351501464844
+      ],
+      "box_normalized": [
+        0.46563729180230035,
+        0.353798219466507,
+        0.5398934258355035,
+        0.5678712207302141
+      ],
+      "source": "pretrained ONNX model only"
+    }
+  ],
+  "timing": {
+    "native_CPU_single_thread_median_ms": 171.190699969884,
+    "samples_ms": [
+      160.3972000302747,
+      171.190699969884,
+      232.5006000464782,
+      183.00139997154474,
+      166.68560000834987
+    ],
+    "note": "Desktop native ONNX inference only; excludes preprocessing and is not browser/mobile performance."
+  },
+  "limitations": "No shape fallback, countdown reader or button heuristics in this raw-model evaluation. One image does not establish Australian road accuracy."
+}

@@ -16,3 +16,5 @@ playwright-report-presenter/
 demo-check.log
 
 pedestrian-*.log
+experiment-install.log
+experiment-reference-check.log
