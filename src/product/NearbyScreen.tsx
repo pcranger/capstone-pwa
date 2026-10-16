@@ -53,7 +53,7 @@ export function NearbyScreen({ onBack, onNavigate, initialView = 'list' }: { onB
       {busy && <Action secondary onClick={() => { ++generation.current; request.current?.abort(); setBusy(false); }}>Cancel search</Action>}
       <Action secondary onClick={() => setView('settings')}>Radius and categories</Action>
       {!!places.length && <><Action secondary onClick={read}>Read nearby places</Action><Action secondary onClick={() => controller.stopVoice()}>Stop reading</Action></>}
-      {checkedAt && <p>Results checked {new Date(checkedAt).toLocaleTimeString()}. Up to 20 provider results; distances are straight line.</p>}
+      <p role="status" aria-atomic="true">{busy ? 'Finding nearby facilities…' : checkedAt ? `${places.length} nearby places found. Results checked ${new Date(checkedAt).toLocaleTimeString()}. Up to 20 provider results; distances are straight line.` : ''}</p>
       {checkedAt && !places.length && <Notice>No matching facilities found in this radius. Increase the radius or change categories.</Notice>}
       {places.map((p,i) => <Row key={p.id} label={`${i + 1}. ${p.name}`} detail={`${Math.round(p.distance)} metres ${p.direction} · ${p.address}`} onClick={() => { setSelected(p); setView('detail'); }} />)}
       {!!places.length && <p>Google Maps</p>}

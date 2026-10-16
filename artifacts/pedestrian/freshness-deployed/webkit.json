@@ -1,0 +1,88 @@
+{
+  "name": "webkit",
+  "status": "Image check complete.",
+  "measurements": [
+    {
+      "elapsedMs": 13777,
+      "message": {
+        "type": "ready"
+      }
+    },
+    {
+      "elapsedMs": 1249,
+      "message": {
+        "type": "result",
+        "timestampMs": 2030,
+        "observations": [
+          {
+            "id": "model-27856",
+            "kind": "signal",
+            "box": {
+              "left": 0.5383032006732488,
+              "top": 0.5035047173500061,
+              "right": 0.6160911236779164,
+              "bottom": 0.5745928168296814
+            },
+            "phase": "RED",
+            "score": 0.7859703925902295,
+            "source": "pretrained"
+          },
+          {
+            "id": "button-0",
+            "kind": "button",
+            "box": {
+              "left": 0.02715254237288136,
+              "top": 0.07521875,
+              "right": 0.12538983050847458,
+              "bottom": 0.154625
+            },
+            "phase": "UNKNOWN",
+            "score": 0.5,
+            "source": "button-shape"
+          },
+          {
+            "id": "button-0-press",
+            "kind": "press-surface",
+            "box": {
+              "left": 0.05288135593220339,
+              "top": 0.118875,
+              "right": 0.10511864406779661,
+              "bottom": 0.1443125
+            },
+            "phase": "UNKNOWN",
+            "score": 0.5,
+            "source": "button-shape"
+          }
+        ],
+        "diagnostics": {
+          "signalCandidates": [
+            {
+              "observation": {
+                "id": "model-27856",
+                "kind": "signal",
+                "box": {
+                  "left": 0.5383032006732488,
+                  "top": 0.5035047173500061,
+                  "right": 0.6160911236779164,
+                  "bottom": 0.5745928168296814
+                },
+                "phase": "RED",
+                "score": 0.7859703925902295,
+                "source": "pretrained"
+              },
+              "evidence": {
+                "accepted": true,
+                "reason": "pedestrian-silhouette",
+                "width": 13,
+                "height": 24,
+                "headRatio": 0.6923076923076923,
+                "splitRows": 2
+              }
+            }
+          ]
+        },
+        "error": null
+      }
+    }
+  ]
+}

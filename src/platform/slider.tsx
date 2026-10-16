@@ -6,6 +6,7 @@ export default function Slider({
   onValueChange,
   onSlidingComplete,
   accessibilityLabel,
+  accessibilityValue,
 }: {
   value: number;
   minimumValue: number;
@@ -15,20 +16,19 @@ export default function Slider({
   accessibilityLabel: string;
   minimumTrackTintColor?: string;
   maximumTrackTintColor?: string;
-  accessibilityValue?: unknown;
+  accessibilityValue?: { text?: string };
   style?: unknown;
 }) {
   return (
     <input
       type="range"
       aria-label={accessibilityLabel}
+      aria-valuetext={accessibilityValue?.text}
       min={minimumValue}
       max={maximumValue}
       step=".01"
       value={value}
-      onChange={(e) => onValueChange(Number(e.target.value))}
-      onPointerUp={(e) => onSlidingComplete(Number(e.currentTarget.value))}
-      onKeyUp={(e) => onSlidingComplete(Number(e.currentTarget.value))}
+      onChange={(e) => { const next = Number(e.target.value); onValueChange(next); onSlidingComplete(next); }}
       style={
         {
           height: 44,

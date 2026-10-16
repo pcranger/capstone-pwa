@@ -1,25 +1,86 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 // Keep API fixtures observable; a production worker otherwise owns these fetches.
 test.use({ serviceWorkers: 'block' });
 const origin={latitude:-33.87,longitude:151.2};
 function encode(points:{latitude:number;longitude:number}[]) { let lastLat=0,lastLng=0,text=''; const value=(n:number)=>{let v=n<0?~(n<<1):n<<1;let s='';while(v>=32){s+=String.fromCharCode((32|(v&31))+63);v>>=5;}return s+String.fromCharCode(v+63);};for(const p of points){const lat=Math.round(p.latitude*1e5),lng=Math.round(p.longitude*1e5);text+=value(lat-lastLat)+value(lng-lastLng);lastLat=lat;lastLng=lng;}return text; }
 const geometry=encode([origin,{...origin,latitude:-33.8695}]);
 const routeData=(distance=60,duration='60s')=>({polyline:{encodedPolyline:geometry},distanceMeters:distance,duration,legs:[{steps:[{polyline:{encodedPolyline:geometry},distanceMeters:distance,navigationInstruction:{instructions:'Head north along the footpath',maneuver:'DEPART'}}]}]});
-async function setup(page:Page,preference='distance') {
+async function setup(page:Page,preference='distance',mapsBrowserKey='') {
+ await page.addInitScript(() => { Object.defineProperty(window, 'SpeechRecognition', { value: undefined, configurable: true }); });
  await page.addInitScript(({origin,preference})=>{
-  localStorage.setItem('crosswise_product_preferences_v1',JSON.stringify({version:1,termsVersion:'2026-10-13'}));localStorage.setItem('crosswise_route_preference',preference);
+  localStorage.setItem('crosswise_product_preferences_v1',JSON.stringify({version:1,termsVersion:'2026-10-13'}));localStorage.setItem('crosswise_permission_setup_v1','done');localStorage.setItem('crosswise_route_preference',preference);
   Object.defineProperty(navigator,'geolocation',{configurable:true,value:{getCurrentPosition:(ok:(position:unknown)=>void)=>ok({coords:{...origin,accuracy:5},timestamp:Date.now()}),watchPosition:()=>1,clearWatch:()=>{}}});
   navigator.mediaDevices.getUserMedia=async()=>{throw new DOMException('Denied','NotAllowedError');};
  },{origin,preference});
- await page.route('**/api/config',r=>r.fulfill({json:{mapsProxyEnabled:true,mapsBrowserKey:''}}));
+ await page.route('**/api/config',r=>r.fulfill({json:{mapsProxyEnabled:true,mapsBrowserKey}}));
  await page.goto('/');
+ await expect(page.getByRole('region',{name:'Preparing offline voice'})).toBeVisible();
+ await expect(page.getByRole('region',{name:'Preparing offline voice'})).toHaveCount(0);
  const agree=page.getByRole('button',{name:'Agree and continue',exact:true});if(await agree.count())await agree.click();
  await expect(page.getByRole('button',{name:'Route guidance',exact:true})).toBeVisible();
 }
 async function homeSettings(page:Page){await page.getByRole('button',{name:'Settings',exact:true}).click();await page.getByRole('button',{name:/^Home.*Register/}).click();}
 async function manager(page:Page){await page.getByRole('button',{name:'Settings',exact:true}).click();await page.getByRole('button',{name:/^Destinations.*Search/}).click();}
 async function back(page:Page){await page.getByRole('button',{name:'‹ Back',exact:true}).click();}
+
+test('destination search automatically gets location and orders matches closest first',async({page})=>{
+ await setup(page);let body:{rankPreference?:string;locationBias:{circle:{center:typeof origin}}}={locationBias:{circle:{center:origin}}};
+ await page.route('**/api/maps/search',r=>{body=r.request().postDataJSON();return r.fulfill({json:{places:[{id:'far',displayName:{text:'Far library'},location:{...origin,latitude:-33.85}},{id:'near',displayName:{text:'Near library'},location:{...origin,latitude:-33.8699}}]}});});
+ await page.getByRole('button',{name:'Route guidance',exact:true}).click();await page.getByRole('button',{name:'Search destination',exact:true}).click();
+ await page.getByLabel('Place name or address',{exact:true}).fill('library');await page.getByRole('button',{name:'Search',exact:true}).click();
+ await expect(page.getByRole('button',{name:/^1\. Near library/})).toBeVisible();expect(body.rankPreference).toBe('DISTANCE');expect(body.locationBias.circle.center).toEqual(origin);
+ await expect(page.getByRole('status')).toContainText('Closest first by straight-line distance');
+ await page.evaluate(()=>{navigator.geolocation.getCurrentPosition=(_ok,fail)=>fail?.({code:1,message:'Denied'} as GeolocationPositionError);});
+ await page.reload();await page.getByRole('button',{name:'Route guidance',exact:true}).click();await page.getByRole('button',{name:'Search destination',exact:true}).click();
+ await page.evaluate(()=>{navigator.geolocation.getCurrentPosition=(_ok,fail)=>fail?.({code:1,message:'Denied'} as GeolocationPositionError);});
+ await page.getByLabel('Place name or address',{exact:true}).fill('library');await page.getByRole('button',{name:'Search',exact:true}).click();
+ await expect(page.getByRole('button',{name:/^1\. Far library/})).toBeVisible();expect(body.rankPreference).toBeUndefined();await expect(page.getByRole('status')).toContainText('Location unavailable');
+});
+
+test('Locate me displays a coarse position and accuracy without claiming it is precise',async({page})=>{
+ await setup(page);
+ await page.evaluate(()=>{navigator.geolocation.getCurrentPosition=ok=>ok({coords:{latitude:-33.87,longitude:151.2,accuracy:150},timestamp:Date.now()} as GeolocationPosition);});
+ await page.getByRole('button',{name:'Road crossing',exact:true}).click();await page.getByRole('button',{name:'Show map',exact:true}).click();
+ await page.getByRole('button',{name:'Locate me',exact:true}).click();
+ await expect(page.getByText(/Your estimated position: -33.87000, 151.20000/)).toContainText('Accuracy: about 150 m — approximate');
+ await expect(page.getByRole('button',{name:'Recenter',exact:true})).toBeVisible();
+});
 async function manuallySave(page:Page,name:string){await page.getByText('Advanced location editing',{exact:true}).click();await page.getByRole('button',{name:'Enter destination coordinates',exact:true}).click();await page.getByLabel('Destination name',{exact:true}).fill(name);await page.getByLabel('Latitude',{exact:true}).fill('-33.8695');await page.getByLabel('Longitude',{exact:true}).fill('151.2');await page.getByRole('button',{name:'Confirm location',exact:true}).click();await expect(page.getByRole('status')).toContainText('Destination registered.');await page.getByRole('button',{name:'OK',exact:true}).click();}
+
+test('selected place maps focus the pin and route overview is optional',async({page})=>{
+ await page.addInitScript(()=>{
+  type Camera={center:{lat:number;lng:number};zoom:number;zoomCalls:number;fitCalls:number};
+  const cameras:Camera[]=[];
+  Object.defineProperty(window,'__mapCameras',{value:cameras});
+  class FakeMap {
+   private camera:Camera;
+   constructor(_element:Element,options:{center:{lat:number;lng:number};zoom:number}){this.camera={center:options.center,zoom:options.zoom,zoomCalls:0,fitCalls:0};cameras.push(this.camera);}
+   panTo(center:{lat:number;lng:number}){this.camera.center=center;}
+   setZoom(zoom:number){this.camera.zoom=zoom;this.camera.zoomCalls++;}
+   fitBounds(){this.camera.fitCalls++;}
+   addListener(){return {remove(){}};}
+  }
+  class FakeMarker {addListener(){return {remove(){}};}setMap(){}}
+  class FakePolyline {setMap(){}}
+  class FakeBounds {extend(){}}
+  Object.defineProperty(window,'google',{value:{maps:{Map:FakeMap,Marker:FakeMarker,Polyline:FakePolyline,LatLngBounds:FakeBounds,event:{addListenerOnce(){},clearInstanceListeners(){}}}}});
+ });
+ await setup(page,'distance','mock-key');
+ await page.route('**/api/maps/route',r=>r.fulfill({json:{routes:[routeData()]}}));
+ await page.getByRole('button',{name:'Route guidance',exact:true}).click();
+ await manuallySave(page,'Pin test');
+ await page.getByRole('button',{name:/^Pin test.*User/}).click();
+ const camera=()=>page.evaluate(()=>{const maps=(window as unknown as {__mapCameras:{center:{lat:number;lng:number};zoom:number;zoomCalls:number;fitCalls:number}[]}).__mapCameras;return maps.at(-1)!;});
+ await expect.poll(async()=>({zoom:(await camera()).zoom,center:(await camera()).center})).toEqual({zoom:17,center:{lat:-33.8695,lng:151.2}});
+ expect((await camera()).zoomCalls).toBeGreaterThan(0);
+ await page.getByRole('button',{name:'Confirm place and review route',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Show whole route',exact:true})).toBeVisible();
+ await expect.poll(async()=>(await camera()).zoom).toBe(17);
+ await page.getByRole('button',{name:'Show whole route',exact:true}).click();
+ await expect.poll(async()=>(await camera()).fitCalls).toBe(1);
+ await page.getByRole('button',{name:'Focus destination',exact:true}).click();
+ expect((await camera()).zoom).toBe(17);
+});
 
 test('Home GPS registration, entrance edit, delete/Undo and reload preserve the committed endpoint',async({page})=>{
  await setup(page);await homeSettings(page);await page.getByRole('button',{name:'Register current location',exact:true}).click();await page.getByRole('button',{name:'Use this location',exact:true}).click();await expect(page.getByRole('heading',{name:'Name destination',exact:true})).toBeVisible();await page.getByRole('button',{name:'Save name',exact:true}).click();await expect(page.getByRole('status')).toContainText('Home registered.');await page.getByRole('button',{name:'OK',exact:true}).click();
@@ -70,8 +131,8 @@ test('canceling a destination change keeps the original paused route and can res
 async function arriveAtSavedEntrance(page:Page){
  await page.route('**/api/maps/route',r=>r.fulfill({json:{routes:[routeData()]}}));await manager(page);await manuallySave(page,'Arrival entrance');await page.getByRole('button',{name:/^Arrival entrance.*User/}).click();await page.getByRole('button',{name:'Confirm place and review route',exact:true}).click();await page.getByRole('button',{name:'Start journey',exact:true}).click();await expect(page.getByRole('navigation',{name:'Walking tools'})).toBeVisible();await page.getByRole('button',{name:'Show map',exact:true}).click();await page.getByRole('button',{name:'I am at my destination',exact:true}).click();await expect(page.getByRole('heading',{name:'Journey completed',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'Arrival entrance',exact:true})).toBeVisible();
 }
-test('confirmed arrival opens the completion choices and Continue Stroll ends the old route',async({page})=>{
- await setup(page);await arriveAtSavedEntrance(page);for(const name of ['Continue Stroll','Choose another destination','Route Home','End walk'])await expect(page.getByRole('button',{name,exact:true})).toBeVisible();await page.getByRole('button',{name:'Continue Stroll',exact:true}).click();await expect(page.getByRole('navigation',{name:'Walking tools'})).toBeVisible();await page.getByRole('navigation',{name:'Walking tools'}).getByRole('button',{name:'Tools',exact:true}).click();await page.getByRole('button',{name:'Route overview',exact:true}).click();await expect(page.getByRole('region',{name:'Route overview',exact:true}).getByRole('status')).toContainText('No active route.');
+test('confirmed arrival opens the completion choices and Continue Road crossing ends the old route',async({page})=>{
+ await setup(page);await arriveAtSavedEntrance(page);for(const name of ['Continue Road crossing','Choose another destination','Route Home','End walk'])await expect(page.getByRole('button',{name,exact:true})).toBeVisible();await page.getByRole('button',{name:'Continue Road crossing',exact:true}).click();await expect(page.getByRole('navigation',{name:'Walking tools'})).toBeVisible();await page.getByRole('navigation',{name:'Walking tools'}).getByRole('button',{name:'Tools',exact:true}).click();await page.getByRole('button',{name:'Route overview',exact:true}).click();await expect(page.getByRole('region',{name:'Route overview',exact:true}).getByRole('status')).toContainText('No active route.');
 });
 test('arrival Route Home waits for provider identity before opening its confirmation',async({page})=>{
  await page.addInitScript(()=>localStorage.setItem('crosswise_saved_places_v2',JSON.stringify({version:2,items:[{placeId:'home-provider',savedAt:1,kind:'provider',role:'home',alias:'Home'}]})));await page.route('**/api/maps/places/home-provider',async r=>{await new Promise(resolve=>setTimeout(resolve,350));await r.fulfill({json:{id:'home-provider',displayName:{text:'Home building'},formattedAddress:'Home Test Street',location:{...origin,latitude:-33.8695}}});});await setup(page);await arriveAtSavedEntrance(page);await page.getByRole('button',{name:'Route Home',exact:true}).click();await expect(page.getByRole('heading',{name:'Home detail',exact:true})).toBeVisible();const home=page.getByRole('region',{name:'Home detail',exact:true});await expect(home.getByRole('heading',{name:'Home',exact:true})).toBeVisible();await expect(home.getByText('Home Test Street',{exact:true})).toBeVisible();await expect(home.getByRole('button',{name:'Edit location',exact:true})).toBeVisible();await home.getByRole('button',{name:'Confirm place and review route',exact:true}).click();await expect(page.getByRole('button',{name:'Start journey',exact:true})).toBeVisible();await page.getByRole('button',{name:'Start journey',exact:true}).click();await expect(page.getByRole('navigation',{name:'Walking tools'})).toBeVisible();

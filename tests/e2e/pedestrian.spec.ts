@@ -1,11 +1,13 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { resolve } from 'node:path';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
 test.describe('real pedestrian model and OCR reference checks', () => {
   test.setTimeout(120000);
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => { Object.defineProperty(window, 'SpeechRecognition', { value: undefined, configurable: true }); });
     await page.goto('/'); await page.getByRole('button', { name: 'Agree and continue', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'CrossWise', exact: true })).toBeFocused();
     await page.getByRole('button', { name: 'Help', exact: true }).click();
     await page.getByText('Check a reference image', { exact: true }).click();
   });
@@ -62,7 +64,7 @@ test.describe('real pedestrian model and OCR reference checks', () => {
       };
     }, source);
     await page.reload();
-    await page.getByRole('button', { name:'Stroll',exact:true }).click();
+    await page.getByRole('button', { name:'Road crossing',exact:true }).click();
     await page.getByRole('button', { name:'Allow camera',exact:true }).click();
     await expect.poll(async () => { await page.getByRole('button', {name:'Start camera assistance',exact:true}).click(); return page.getByRole('button', {name:'Start crossing',exact:true}).count(); }, {timeout:45000,intervals:[1000]}).toBe(1);
     await expect(page.getByTestId('pedestrian-box-signal').first()).toBeVisible({timeout:45000});
@@ -74,6 +76,28 @@ test.describe('real pedestrian model and OCR reference checks', () => {
     await page.evaluate(() => { Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange')); });
     await expect(page.getByTestId('pedestrian-overlay')).toHaveCount(0);
     await expect(page.getByRole('button', {name:'I’m on the footpath',exact:true})).toBeVisible();
+  });
+  test('reported red signal survives delayed live results and clears on camera loss',async({page,browserName})=>{
+    test.skip(browserName==='webkit','Synthetic captureStream is unavailable in this runner.');
+    const source=`data:image/jpeg;base64,${(await readFile('tests/fixtures/pedestrian/reported-red-screen.jpg')).toString('base64')}`;
+    await page.addInitScript(imageSource=>{
+      const OriginalWorker=window.Worker;
+      window.Worker=class extends OriginalWorker {
+        set onmessage(handler:((this:Worker,event:MessageEvent)=>unknown)|null){super.onmessage=handler?event=>{if(event.data?.type==='result')setTimeout(()=>handler.call(this,event),1500);else handler.call(this,event);}:null;}
+      };
+      navigator.mediaDevices.getUserMedia=async()=>{
+        const image=new Image();image.src=imageSource;await image.decode();const canvas=document.createElement('canvas');canvas.width=image.width;canvas.height=image.height;const ctx=canvas.getContext('2d')!;
+        const draw=()=>{ctx.drawImage(image,0,0);requestAnimationFrame(draw);};draw();return canvas.captureStream(10);
+      };
+    },source);
+    await page.reload();await page.getByRole('button',{name:'Settings',exact:true}).click();await page.getByRole('switch',{name:'Developer camera view',exact:false}).check();await page.getByRole('button',{name:'‹ Back',exact:true}).click();
+    await expect(page.getByText('Plan your route. Stay informed at the crossing.',{exact:true})).toHaveCount(0);
+    await page.getByRole('button',{name:'Road crossing',exact:true}).click();await page.getByRole('button',{name:'Allow camera',exact:true}).click();
+    await expect(page.getByTestId('pedestrian-indicator')).toHaveAttribute('data-signal','red',{timeout:45000});
+    await page.screenshot({path:`artifacts/pedestrian/delayed-red-${test.info().project.name}.png`});
+    await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
+    await expect(page.getByTestId('pedestrian-indicator')).toHaveAttribute('data-signal','grey');
+    await expect(page.getByTestId('pedestrian-overlay')).toHaveCount(0);
   });
   test.describe('model download recovery', () => {
     test.use({serviceWorkers:'block'});

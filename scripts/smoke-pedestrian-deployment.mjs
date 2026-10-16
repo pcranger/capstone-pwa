@@ -17,6 +17,7 @@ for(const [name,engine] of [['chromium',chromium],['webkit',webkit]]){
   expect(await(await context.request.get(`${base}/sw.js`)).text()).toBe(await readFile('dist/sw.js','utf8'));
   await page.goto(base);expect(await page.evaluate(()=>isSecureContext)).toBe(true);
   await page.getByRole('button',{name:'Agree and continue',exact:true}).click();
+  const setup=page.getByRole('button',{name:'Continue to CrossWise',exact:true});if(await setup.count())await setup.click();
   await page.getByRole('button',{name:'Help',exact:true}).click();
   await page.getByText('Check a reference image',{exact:true}).click();
   const results=[];

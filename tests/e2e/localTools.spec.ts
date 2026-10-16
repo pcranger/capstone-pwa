@@ -1,6 +1,7 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 
 async function home(page: Page) {
+  await page.addInitScript(() => { Object.defineProperty(window, 'SpeechRecognition', { value: undefined, configurable: true }); });
   await page.goto('/');
   const agree = page.getByRole('button', { name: 'Agree and continue', exact: true });
   await expect(agree.or(page.getByRole('heading', { name: 'CrossWise', exact: true }))).toBeVisible();

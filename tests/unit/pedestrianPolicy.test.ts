@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BoxF } from '../../src/core/geometry';
-import { crossingDecision, pedestrianStatus } from '../../src/perception/pedestrianPolicy';
+import { crossingDecision, pedestrianStatus, PEDESTRIAN_MAX_AGE_MS } from '../../src/perception/pedestrianPolicy';
 import type { PedestrianObservation, PedestrianScene } from '../../src/perception/pedestrianTypes';
 const box = new BoxF(.4, .2, .6, .5);
 const observation = (phase: 'RED' | 'GREEN' | 'UNKNOWN'): PedestrianObservation => ({ id: phase, kind: 'signal', phase, box, score: .95, source: 'pretrained' });
@@ -23,8 +23,15 @@ describe('Australian pedestrian countdown and start guidance', () => {
     expect(crossingDecision(scene(timer(seconds)), 200).message).toContain('unclear');
   });
   it('rejects stale, future, failed, absent and multiple signals', () => {
-    for (const [input, now] of [[scene(observation('GREEN')), 1301], [scene(observation('GREEN')), 99], [{ ...scene(), error: 'failed' }, 200], [scene(), 200], [scene(observation('GREEN'), observation('GREEN')), 200]] as const)
+    for (const [input, now] of [[scene(observation('GREEN')), 100+PEDESTRIAN_MAX_AGE_MS+1], [scene(observation('GREEN')), 99], [{ ...scene(), error: 'failed' }, 200], [scene(), 200], [scene(observation('GREEN'), observation('GREEN')), 200]] as const)
       expect(crossingDecision(input, now).blocked).toBe(true);
+  });
+  it('retains delayed observations for five seconds, then reports them outdated',()=>{
+    const red=scene(observation('RED'));
+    expect(crossingDecision(red,1600).message).toContain('Red pedestrian');
+    expect(crossingDecision(red,5100).message).toContain('Red pedestrian');
+    expect(crossingDecision(red,5101).message).toContain('outdated');
+    expect(crossingDecision(scene(observation('GREEN')),4000).blocked).toBe(true);
   });
   it('does not treat experimental public weights as a validated road-crossing authority', () => {
     expect(crossingDecision(scene(observation('GREEN')), 200)).toMatchObject({ blocked: true, seconds: null });

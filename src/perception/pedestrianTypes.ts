@@ -1,5 +1,8 @@
 import type { BoxF } from '../core/geometry';
 
+/** Preserve small symbol details for verification; the neural input stays 640 square. */
+export const PEDESTRIAN_MAX_IMAGE_EDGE = 1920;
+
 export type PedestrianKind = 'signal' | 'countdown' | 'button' | 'press-surface';
 export interface PedestrianObservation {
   id: string;

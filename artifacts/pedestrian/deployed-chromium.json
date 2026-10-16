@@ -1,0 +1,19 @@
+{
+  "base": "https://capstone-pwa-dev.fly.dev",
+  "results": [
+    {
+      "fixture": "street-green",
+      "observations": "Green pedestrian"
+    },
+    {
+      "fixture": "countdown",
+      "observations": "Red pedestrian · shape estimate\nGreen pedestrian · shape estimate\nCountdown · 21s · do not start"
+    },
+    {
+      "fixture": "button",
+      "observations": "Possible crossing button\nPossible press surface"
+    }
+  ],
+  "offline": true,
+  "errors": []
+}

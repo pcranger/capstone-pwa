@@ -1,7 +1,9 @@
 import type { PedestrianScene } from './pedestrianTypes';
 
 export const MINIMUM_START_SECONDS = 10;
-export const PEDESTRIAN_MAX_AGE_MS = 1200;
+// Detection observations may arrive slowly on phones. This is a display window,
+// not permission to start crossing; camera loss still clears the observations.
+export const PEDESTRIAN_MAX_AGE_MS = 5000;
 export interface CrossingDecision { blocked: boolean; message: string; seconds: number | null }
 
 export function pedestrianStatus(scene: PedestrianScene, now: number, alreadyCrossing: boolean): string {

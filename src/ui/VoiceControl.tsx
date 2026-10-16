@@ -22,7 +22,7 @@ export function VoiceStatus({ onHelp }: { onHelp: () => void }) {
   const text = !settings.speech ? 'Voice commands are off. Enable Speech in Settings.' : state.phase === 'listening' ? 'Listening…' : state.phase === 'working' ? 'Working…'
     : state.phase === 'off' ? 'Voice off' : state.text;
   return <View style={{ paddingHorizontal: 12, paddingBottom: 8, gap: 4 }}>
-    <Text style={type.bodyMedium}>{text}</Text>
+    <Text aria-live="polite" aria-atomic={true} style={type.bodyMedium}>{text}</Text>
     {(state.phase === 'error' || !settings.speech) && <TextButton label="Voice help" onPress={onHelp} />}
   </View>;
 }

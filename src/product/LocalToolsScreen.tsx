@@ -218,7 +218,7 @@ function RecordingsScreen({ onBack }: { onBack: () => void }) {
   if (page === 'library') return <RecordingLibrary onBack={() => setPage('control')} />;
   const active = ['starting', 'recording', 'paused', 'finalizing'].includes(state.status);
   return <Page title="Walking recorder" onBack={onBack}>
-    <p>Video stays on this device. Recording shares the Stroll camera. Leaving this menu keeps an active recording running; locking the device or hiding the app finalizes an interrupted clip.</p>
+    <p>Video stays on this device. Recording shares the Road crossing camera. Leaving this menu keeps an active recording running; locking the device or hiding the app finalizes an interrupted clip.</p>
     {stream && <video ref={preview} autoPlay muted playsInline aria-label="Shared recording camera preview" style={{ width: '100%', maxHeight: '30vh', background: '#000' }} />}
     <p role="status">Recorder: {state.status}. Camera: {camera}. Elapsed {seconds(state.elapsedMs)}. {state.audio ? 'Microphone audio included.' : 'Silent video.'} {state.protected ? 'Current clip protected.' : ''}</p>
     <p>{state.clipsSaved} clips saved in this session · <Bytes value={state.bytesSaved} />. Format: {state.mimeType || (recordingMime() === null ? 'Unavailable' : recordingMime() || 'Browser default')}.</p>
@@ -250,7 +250,7 @@ function RecorderSettingsPage({ onBack }: { onBack: () => void }) {
     <p>Five-minute clips and 50 rolling clips match the reference behavior. The browser selects its supported MP4 or WebM format. Automatic retention removes the oldest unprotected clips only.</p>
     {active && <Message>Stop recording to change recorder settings. Route pause does not pause the recorder.</Message>}
     <Field label="Enable walking recorder"><input type="checkbox" checked={settings.enabled} disabled={active} onChange={e => set({ enabled: e.target.checked })} /></Field>
-    <Field label="Auto-start with Stroll"><input type="checkbox" checked={settings.autoStart} disabled={active || !settings.enabled} onChange={e => set({ autoStart: e.target.checked })} /></Field>
+    <Field label="Auto-start with Road crossing"><input type="checkbox" checked={settings.autoStart} disabled={active || !settings.enabled} onChange={e => set({ autoStart: e.target.checked })} /></Field>
     <Field label="Include microphone audio"><input type="checkbox" checked={settings.includeAudio} disabled={active} onChange={e => set({ includeAudio: e.target.checked })} /></Field>
     <Field label="Clip duration"><select style={inputStyle} value={settings.clipMinutes} disabled={active} onChange={e => set({ clipMinutes: Number(e.target.value) })}><option value={1}>1 minute</option><option value={3}>3 minutes</option><option value={5}>5 minutes</option></select></Field>
     <Field label="Maximum rolling clips"><select style={inputStyle} value={settings.maxClips} disabled={active} onChange={e => set({ maxClips: Number(e.target.value) })}>{[5, 10, 25, 50, 100].map(n => <option key={n} value={n}>{n} clips</option>)}</select></Field>
@@ -287,7 +287,7 @@ function RecordingLibrary({ onBack }: { onBack: () => void }) {
       <Action danger disabled={!clips.length || !['idle', 'error'].includes(recorder.status)} onClick={() => setConfirm(clips.map(c => c.id))}>Delete all recordings</Action></div>
     {!['idle', 'error'].includes(recorder.status) && <p>Stop recording before deleting the entire library. You can export or delete selected finalized clips while recording.</p>}
     {loading && <Message>Loading recordings…</Message>}{error && <Message error>{error}</Message>}{notice && <Message>{notice}</Message>}
-    {!loading && !visible.length && <p>{onlyProtected ? 'No protected clips.' : 'No saved recordings. Start a recording using the shared Stroll camera.'}</p>}
+    {!loading && !visible.length && <p>{onlyProtected ? 'No protected clips.' : 'No saved recordings. Start a recording using the shared Road crossing camera.'}</p>}
     {visible.map(clip => <article style={cardStyle} key={clip.id}>
       <Field label={`Select recording ${new Date(clip.startedAt).toLocaleString()}`}><input type="checkbox" checked={selected.includes(clip.id)} onChange={e => setSelected(ids => e.target.checked ? [...ids, clip.id] : ids.filter(id => id !== clip.id))} /></Field>
       <h2>{new Date(clip.startedAt).toLocaleString()}</h2><p>{seconds(clip.durationMs)} · <Bytes value={clip.bytes} /> · {clip.audio ? 'Audio' : 'Silent'}{clip.protected ? ' · Protected' : ''}{clip.interrupted ? ' · Interrupted session' : ''}</p>

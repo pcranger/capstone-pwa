@@ -1,7 +1,7 @@
 import {test,expect,vi,beforeEach,afterEach,type Mock} from "vitest";
 import { P } from '../../src/strings';
 import { Journey, type NavigationDependencies } from '../../src/nav/journey';
-import { decodePolyline, type LocationFix, type PlaceCandidate, type WalkingRoute, parseWalkingRoute, searchPlaces, walkingRoute, usableFix } from '../../src/nav/navigation';
+import { decodePolyline, type LocationFix, type PlaceCandidate, type WalkingRoute, parseWalkingRoute, searchPlaces, walkingRoute, usableFix, displayableFix } from '../../src/nav/navigation';
 import { bounded } from '../../src/nav/location';
 import { walkingCue } from '../../src/nav/feedbackPolicy';
 import { Cues, HapticPattern, Phrase, Priority, ToneKind } from '../../src/feedback/cue';
@@ -123,6 +123,16 @@ test('provider parses step geometry, instructions, destination identity and warn
   const parsed = parseWalkingRoute(response(), to); expect(parsed.steps[0].points).toHaveLength(3); expect(parsed.destinationAddress).toBe(to.address); expect(parsed.warnings).toEqual(['Test warning']);
   const broken = response(); broken.routes[0].legs[0].steps[0].polyline.encodedPolyline = ''; expect(() => parseWalkingRoute(broken, to)).toThrow('incomplete');
 });
+
+test('Hospital-style sections without navigationInstruction retain their real geometry and warn about missing directions',()=>{
+ const data=response();
+ const original=data.routes[0].legs[0].steps[0];
+ const result=parseWalkingRoute({...data,routes:[{...data.routes[0],legs:[{steps:[original,{...original,navigationInstruction:undefined}]}]}]},to);
+ expect(result.steps).toHaveLength(2);
+ expect(result.steps[1].points).toEqual(result.steps[0].points);
+ expect(result.steps[1].instruction).toContain('No written turn instruction supplied');
+ expect(result.warnings.some(w=>w.includes('no written turn instructions'))).toBe(true);
+});
 test('Google requests use confirmed place ID, WALK travel mode, step geometry, and a limited Places field mask', async () => {
   const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({ ok: true, json: async () => ({ places: [
     { id: to.id, displayName: { text: to.name }, formattedAddress: to.address, location: to.point },
@@ -137,6 +147,22 @@ test('Google requests use confirmed place ID, WALK travel mode, step geometry, a
 test('Google permission errors never echo provider bodies or API keys', async () => {
   const body = vi.fn(async () => ({ error: 'sensitive-key and location' })); vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce({ ok: false, status: 403, json: body } as unknown as Response);
   await expect(searchPlaces('Library', fix(), 'sensitive-key')).rejects.toThrow('route service is unavailable'); expect(body).not.toHaveBeenCalled();
+});
+
+test('search requests distance ranking and sorts returned matches by distance, with relevance fallback without a position',async()=>{
+ const far={id:'far',displayName:{text:'Far library'},location:p(1200,0)},near={id:'near',displayName:{text:'Near library'},location:p(30,0)};
+ const fetcher=vi.spyOn(globalThis,'fetch').mockResolvedValue({ok:true,json:async()=>({places:[far,near]})} as Response);
+ expect((await searchPlaces('library',p(0,0),'test-key')).map(p=>p.id)).toEqual(['near','far']);
+ expect(JSON.parse(fetcher.mock.calls[0][1]?.body as string).rankPreference).toBe('DISTANCE');
+ expect((await searchPlaces('library',null,'test-key')).map(p=>p.id)).toEqual(['far','near']);
+ expect(JSON.parse(fetcher.mock.calls[1][1]?.body as string)).not.toHaveProperty('rankPreference');
+});
+
+test('coarse estimates can be displayed without qualifying for guidance, and stale positions are hidden',()=>{
+ const estimate={...fix(),accuracy:150,timestamp:Date.now()};
+ expect(displayableFix(estimate,Date.now())).toBe(true);expect(usableFix(estimate,Date.now())).toBe(false);
+ expect(displayableFix({...estimate,timestamp:Date.now()-61000},Date.now())).toBe(false);
+ expect(displayableFix({...estimate,accuracy:null},Date.now())).toBe(false);
 });
 
 test('recenter updates map location without restarting the watch or advancing instructions', async () => {

@@ -1,0 +1,48 @@
+{
+  "name": "chromium",
+  "status": "No supported pedestrian signal, countdown or button found.",
+  "measurements": [
+    {
+      "elapsedMs": 23630.800000071526,
+      "message": {
+        "type": "ready"
+      }
+    },
+    {
+      "elapsedMs": 1264.2000000476837,
+      "message": {
+        "type": "result",
+        "timestampMs": 2177.600000023842,
+        "observations": [],
+        "diagnostics": {
+          "signalCandidates": [
+            {
+              "observation": {
+                "id": "model-27856",
+                "kind": "signal",
+                "box": {
+                  "left": 0.5388817544710838,
+                  "top": 0.5036820471286774,
+                  "right": 0.6157633312677933,
+                  "bottom": 0.574585908651352
+                },
+                "phase": "RED",
+                "score": 0.7804018179501924,
+                "source": "pretrained"
+              },
+              "evidence": {
+                "accepted": false,
+                "reason": "legs-not-distinct",
+                "width": 9,
+                "height": 18,
+                "headRatio": 0.7777777777777778,
+                "splitRows": 0
+              }
+            }
+          ]
+        },
+        "error": null
+      }
+    }
+  ]
+}

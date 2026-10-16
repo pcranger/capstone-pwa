@@ -77,7 +77,7 @@ export class WalkingRecorder {
     if (this.state.value.unsaved) throw new Error('Export or discard the unsaved clip before starting another recording.');
     const valid = validateRecorderSettings(options);
     if (!valid.enabled) throw new Error('Enable the walking recorder in Recorder settings first.');
-    if (!source?.getVideoTracks().some(t => t.readyState === 'live')) throw new Error('Start Stroll and allow the camera before recording.');
+    if (!source?.getVideoTracks().some(t => t.readyState === 'live')) throw new Error('Start Road crossing and allow the camera before recording.');
     const mime = this.deps.create ? 'video/webm' : recordingMime();
     if (mime === null) throw new Error('Video recording is unavailable in this browser. Try a browser with MediaRecorder support.');
     const generation = ++this.generation;

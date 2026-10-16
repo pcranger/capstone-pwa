@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { PedestrianClient } from '../perception/pedestrianClient';
 import { crossingDecision } from '../perception/pedestrianPolicy';
-import type { PedestrianScene } from '../perception/pedestrianTypes';
+import { PEDESTRIAN_MAX_IMAGE_EDGE, type PedestrianScene } from '../perception/pedestrianTypes';
 import { PedestrianOverlay, pedestrianLabel } from '../ui/PedestrianOverlay';
 
 /** Same worker and models as the live camera. Reference images never enter live crossing state. */
@@ -25,7 +25,7 @@ export function PedestrianImageCheck() {
     try {
       const bitmap = await createImageBitmap(file);
       if (token !== serial.current) { bitmap.close(); return; }
-      const scale = Math.min(1, 960 / Math.max(bitmap.width, bitmap.height));
+      const scale = Math.min(1, PEDESTRIAN_MAX_IMAGE_EDGE / Math.max(bitmap.width, bitmap.height));
       const canvas = document.createElement('canvas'); canvas.width = Math.round(bitmap.width * scale); canvas.height = Math.round(bitmap.height * scale);
       const context = canvas.getContext('2d')!; context.drawImage(bitmap, 0, 0, canvas.width, canvas.height); bitmap.close();
       setSource(URL.createObjectURL(file)); setAspect(canvas.width / canvas.height);

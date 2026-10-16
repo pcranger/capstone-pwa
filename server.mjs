@@ -33,7 +33,7 @@ export function createApp({mapsKey=process.env.GOOGLE_MAP_API_KEY??'',browserMap
     if(url.pathname==='/api/maps/search'&&req.method==='POST'){
      const incoming=await bodyOf(req);if(typeof incoming.textQuery!=='string'||!incoming.textQuery.trim()||incoming.textQuery.length>240){reply(res,400,{error:'Enter a destination name and suburb.'});return;}
      body={textQuery:incoming.textQuery.trim(),pageSize:5,languageCode:'en'};
-     const circle=incoming.locationBias?.circle;if(point(circle?.center))body.locationBias={circle:{center:circle.center,radius:5000}};
+     const circle=incoming.locationBias?.circle;if(point(circle?.center)){body.locationBias={circle:{center:circle.center,radius:5000}};body.rankPreference='DISTANCE';}
      target='https://places.googleapis.com/v1/places:searchText';mask=masks.search;
     }else if(url.pathname==='/api/maps/nearby'&&req.method==='POST'){
      const incoming=await bodyOf(req),circle=incoming.locationRestriction?.circle,types=incoming.includedTypes;

@@ -11,10 +11,12 @@ import {type AuthoredRoute} from './local/routes';
 import {authoredJourney} from './authoredJourney';
 import {collectBackup} from './local/backup';
 import {refreshDeviceData,importDeviceData,resetDeviceData} from './dataLifecycle';
+import {focusActiveHeading} from './focus';
 export default function PresenterTools({page,onBack,onOpen,onError}:{page:string;onBack:()=>void;onOpen:(page:string)=>void;onError:(message:string)=>void}){
  const journey=useStore(controller.journey.state),planner=useStore(controller.planner.state),ui=useStore(controller.ui),saved=useStore(controller.savedPlaces.state);
  const [pending,setPending]=useState<AuthoredRoute|null>(null);
  const crossing=ui.snapshot.mode===AssistMode.CROSSING||journey.crossing;
+ useEffect(()=>{const frame=requestAnimationFrame(focusActiveHeading);return()=>cancelAnimationFrame(frame);},[page]);
  useEffect(()=>{const restored=()=>{void refreshDeviceData().catch(()=>onError('Device data could not be refreshed. Reload to retry.'));};window.addEventListener('crosswise-data-restored',restored);return()=>window.removeEventListener('crosswise-data-restored',restored);},[onError]);
  const start=async(route:AuthoredRoute)=>{if(crossing)throw new Error('Finish crossing before changing route.');if(controller.journey.hasJourney)controller.journey.pause();if(!await controller.journey.start(authoredJourney(route)))throw new Error(controller.journey.state.value.error??'Check your position near the first waypoint.');controller.queueInitialGuidance();onOpen('walk');};
  return <>

@@ -3,7 +3,7 @@ export default defineConfig({
   testDir: "tests/e2e",
   outputDir: process.env.PRESENTER_TESTS ? "test-results-presenter" : "test-results-demo",
   fullyParallel: false,
-  testMatch: process.env.PRESENTER_TESTS ? ["**/app.spec.ts","**/localTools.spec.ts"] : ["**/productShell.spec.ts","**/places.spec.ts","**/demoCamera.spec.ts","**/pedestrian.spec.ts","**/pedestrianVehicleExclusion.spec.ts"],
+  testMatch: process.env.PRESENTER_TESTS ? ["**/app.spec.ts","**/localTools.spec.ts","**/accessibility.spec.ts"] : ["**/productShell.spec.ts","**/places.spec.ts","**/demoCamera.spec.ts","**/pedestrian.spec.ts","**/pedestrianVehicleExclusion.spec.ts","**/accessibility.spec.ts"],
   timeout: 60000,
   expect: { timeout: 10000 },
   reporter: [["list"], ["html", { open: "never", outputFolder: process.env.PRESENTER_TESTS ? "playwright-report-presenter" : "playwright-report" }]],

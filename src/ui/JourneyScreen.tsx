@@ -1,7 +1,8 @@
 import { PRESENTER_TOOLS } from '../product/demoScope';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MaterialIcons } from '../platform/icons';
-import { BackHandler, Keyboard, PanResponder, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { BackHandler, Keyboard, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { focusElement } from '../product/focus';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from './ScaledText';
 import { AssistMode, UserCommand } from '../crossing/crossingEngine';
@@ -13,13 +14,13 @@ import { S } from '../strings';
 import { BigButton, IconPill, TextButton } from './components';
 import { MainScreen } from './MainScreen';
 import { MapPanel } from './MapPanel';
-import { DestinationSheet } from './DestinationSheet';
 import { Colors, useType } from './theme';
 import { VoiceControl, VoiceStatus } from './VoiceControl';
 
 /** Two views; neither map interaction nor the keyboard resizes the camera. */
-export function JourneyScreen({ onSettings, hidden, hasPermission, canRequestPermission, requestPermission }: {
+export function JourneyScreen({ onSettings, onOpenRouteGuidance, hidden, hasPermission, canRequestPermission, requestPermission }: {
   onSettings: () => void; hidden: boolean;
+  onOpenRouteGuidance: (placeId?: string) => void;
   hasPermission: boolean; canRequestPermission: boolean; requestPermission: () => unknown;
 }) {
   const type = useType();
@@ -39,13 +40,17 @@ export function JourneyScreen({ onSettings, hidden, hasPermission, canRequestPer
   const active = journey.phase === 'walking' || journey.phase === 'paused';
   const available = Math.max(120, height - keyboard - 56);
   const requestedHeight = Math.min(available, expanded || keyboard ? height * 0.76 : Math.max(190, height * 0.3));
-  const [sheetGesture] = useState(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onPanResponderRelease: (_, gesture) => {
-      Keyboard.dismiss(); controller.presentation.update(s => ({ ...s, expanded: Math.abs(gesture.dy) < 24 ? !s.expanded : gesture.dy < 0 }));
-    },
-  }));
+  const previousMapOpen = useRef(mapOpen);
+  useEffect(() => {
+    const changed = previousMapOpen.current !== mapOpen;
+    previousMapOpen.current = mapOpen;
+    if (hidden || !changed) return;
+    const frame = requestAnimationFrame(() => focusElement(document.querySelector<HTMLElement>(mapOpen
+      ? '[data-testid="walking-map-title"]' : '[data-testid="show-walking-map"]')));
+    return () => cancelAnimationFrame(frame);
+  }, [mapOpen, hidden]);
   const closeMap = () => { Keyboard.dismiss(); setMapOpen(false); };
+  const openRouteGuidance = (placeId?: string) => { controller.stopVoice(); onOpenRouteGuidance(placeId); };
   const collapse = () => { Keyboard.dismiss(); setExpanded(false); };
   useEffect(() => {
     const show = Keyboard.addListener('keyboardWillChangeFrame', e => setKeyboard(Math.max(0, window.height - e.endCoordinates.screenY - insets.bottom)));
@@ -54,8 +59,8 @@ export function JourneyScreen({ onSettings, hidden, hasPermission, canRequestPer
   }, [window.height, insets.bottom]);
   useEffect(() => {
     const listener = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (hidden || !mapOpen) return false;
-      if (keyboard || expanded) { Keyboard.dismiss(); controller.presentation.update(s => ({ ...s, expanded: false })); }
+      if (hidden || !mapOpen || document.querySelector('dialog[open]')) return false;
+      if (keyboard || expanded) { if (keyboard) Keyboard.dismiss(); controller.presentation.update(s => ({ ...s, expanded: false })); }
       else controller.closeMap();
       return true;
     });
@@ -69,7 +74,7 @@ export function JourneyScreen({ onSettings, hidden, hasPermission, canRequestPer
       accessibilityElementsHidden={mapOpen} importantForAccessibility={mapOpen ? 'no-hide-descendants' : 'auto'}
       onLayout={event => setHeaderHeight(event.nativeEvent.layout.height)}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' }}>
-      <Text style={[type.titleMedium, { flex: 1 }]} maxFontSizeMultiplier={1.3} accessibilityRole="header">
+      <Text testID="walking-heading" style={[type.titleMedium, { flex: 1 }]} maxFontSizeMultiplier={1.3} accessibilityRole="header">
         {PRESENTER_TOOLS && settings.interfaceMode === InterfaceMode.DEVELOPER ? 'CrossWise · Developer' : 'CrossWise'}
       </Text>
       <VoiceControl onHelp={onSettings} />
@@ -81,22 +86,23 @@ export function JourneyScreen({ onSettings, hidden, hasPermission, canRequestPer
       pointerEvents={mapOpen ? 'auto' : 'none'} accessibilityElementsHidden={!mapOpen}
       importantForAccessibility={mapOpen ? 'auto' : 'no-hide-descendants'} accessibilityViewIsModal={mapOpen}
       onAccessibilityEscape={closeMap}>
+      <h2 data-testid="walking-map-title" className="cw-sr-only" tabIndex={-1}>Walking map and route</h2>
       <MapPanel height={height} fullScreen toolsHidden={expanded || keyboard > 0} bottomInset={sheetHeight + keyboard + 12} onInteract={() => { controller.stopVoice(); collapse(); }} preview={(!active || planner.replacing) ? planner : undefined}
-        onCandidate={place => { controller.stopVoice(); controller.planner.select(place); setExpanded(true); }}
-        onPlaceId={id => { controller.stopVoice(); if (active && !planner.replacing && !controller.changeDestination()) return; setExpanded(true); void controller.planner.resolve(id); }} />
+        onCandidate={place => openRouteGuidance(place.id)}
+        onPlaceId={id => openRouteGuidance(id)} />
       <View style={[styles.sheet, { height: requestedHeight, bottom: keyboard }]}
         onLayout={e => setSheetHeight(e.nativeEvent.layout.height)}>
         <VoiceStatus onHelp={onSettings} />
-        <View style={styles.sheetHandle} {...sheetGesture.panHandlers} accessible accessibilityRole="button"
-          accessibilityLabel={expanded ? 'Collapse destination panel' : 'Expand destination panel'}
-          accessibilityState={{ expanded }} onAccessibilityTap={() => { Keyboard.dismiss(); setExpanded(!expanded); }}>
+        <Pressable style={styles.sheetHandle} accessibilityRole="button"
+          accessibilityLabel={expanded ? 'Collapse walking panel' : 'Expand walking panel'}
+          accessibilityState={{ expanded }} onPress={() => { setExpanded(!expanded); }}>
           <MaterialIcons name={expanded ? 'keyboard-arrow-down' : 'keyboard-arrow-up'} size={26} color={Colors.Accent} />
-        </View>
-        {active && !planner.replacing ? <ScrollView contentContainerStyle={{ paddingBottom: 8 }}>
-          <RouteSummary onDestination={() => setExpanded(true)} />
+        </Pressable>
+        <ScrollView contentContainerStyle={{ paddingBottom: 8 }}>
+          <RouteSummary onDestination={() => openRouteGuidance()} />
           <JourneyControls stacked={window.fontScale > 1.3} />
-          <TextButton label="Change destination" onPress={() => controller.changeDestination()} />
-        </ScrollView> : <DestinationSheet visible={mapOpen && !hidden} />}
+          {active && <TextButton label="Change destination" onPress={() => openRouteGuidance()} />}
+        </ScrollView>
       </View>
       <View style={[styles.exitMap, { bottom: sheetHeight + keyboard + 12 }]}>
         <VoiceControl onHelp={onSettings} />
@@ -106,8 +112,8 @@ export function JourneyScreen({ onSettings, hidden, hasPermission, canRequestPer
     <View style={[styles.dock, mapOpen && { opacity: 0 }]} pointerEvents={mapOpen ? 'none' : 'auto'}
       accessibilityElementsHidden={mapOpen} importantForAccessibility={mapOpen ? 'no-hide-descendants' : 'auto'}
       onLayout={event => setDockHeight(event.nativeEvent.layout.height)}>
-      <ScrollView style={{ maxHeight: height * 0.3 }}><JourneyControls stacked={window.fontScale > 1.3} compact={PRESENTER_TOOLS && settings.interfaceMode === InterfaceMode.USER} /></ScrollView>
-      <Pressable accessibilityRole="button" accessibilityLabel="Show map" accessibilityState={{ expanded: mapOpen }}
+      <ScrollView style={{ maxHeight: height * 0.3 }}>{active && <RouteSummary onDestination={() => openRouteGuidance()} />}<JourneyControls stacked={window.fontScale > 1.3} compact={PRESENTER_TOOLS && settings.interfaceMode === InterfaceMode.USER} /></ScrollView>
+      <Pressable testID="show-walking-map" accessibilityRole="button" accessibilityLabel="Show map" accessibilityState={{ expanded: mapOpen }}
         onPress={() => setMapOpen(true)} style={styles.mapToggle}>
         <MaterialIcons name="keyboard-arrow-up" size={28} color={Colors.OnSurface} />
       </Pressable>
@@ -122,7 +128,7 @@ export function RouteSummary({ onDestination }: { onDestination: () => void }) {
   const active = s.phase === 'walking' || s.phase === 'paused';
   return <View style={styles.summary}>
     {active && route ? <>
-      <Text style={type.labelLarge} accessibilityRole="header">{s.phase === 'paused' ? 'JOURNEY PAUSED' : s.crossing ? 'CROSSING HELP' : `ROUTE · ${s.stepIndex + 1} OF ${route.steps.length}`}</Text>
+      <Text style={type.labelLarge} accessibilityRole="header" aria-live="polite" aria-atomic={true}>{s.phase === 'paused' ? 'JOURNEY PAUSED' : s.crossing ? 'CROSSING HELP' : `ROUTE · ${s.stepIndex + 1} OF ${route.steps.length}`}</Text>
       <Text style={type.bodyMedium}>To {route.destination}</Text>
       {s.crossing ? <>
         <Text style={type.titleMedium}>Route speech is paused.</Text>
@@ -131,7 +137,7 @@ export function RouteSummary({ onDestination }: { onDestination: () => void }) {
       </> : s.phase === 'paused' ? <Text style={type.bodyLarge}>Guidance is paused. Check your position before resuming.</Text> : <>
         <Text style={type.titleLarge}>{route.steps[s.stepIndex].instruction}</Text>
         <Text style={type.bodyMedium}>{s.remaining !== null ? `About ${s.remaining} metres remaining` :
-          s.locationStatus === 'off-route' ? 'Away from this instruction. Check your position from the footpath.' : 'Location uncertain — distance updates paused.'}</Text>
+          s.locationStatus === 'off-route' ? 'Away from this instruction. Check your position from the footpath.' : 'Location unreliable or stale — distance updates paused. Use Locate me on the map to check your position and accuracy.'}</Text>
         <TextButton label={s.stepIndex < route.steps.length - 1 ? 'I completed this instruction' : 'I am at my destination'}
           onPress={() => { if (s.stepIndex < route.steps.length - 1) controller.journey.next(s.stepIndex); else controller.finishJourney(s.stepIndex); }} />
       </>}

@@ -4,8 +4,9 @@ import { Text } from './ScaledText';
 import MapView, { Circle, Marker, Polyline, PROVIDER_GOOGLE } from '../platform/maps';
 import { nativeMapConfigured } from '../config/services';
 import type { PlannerState } from '../nav/planner';
-import type { PlaceCandidate } from '../nav/navigation';
-import { usableFix } from '../nav/navigation';
+import type { PlaceCandidate, LocationFix } from '../nav/navigation';
+import { displayableFix } from '../nav/navigation';
+import { currentLocation } from '../product/location';
 import { controller } from '../state/controller';
 import { useStore } from '../state/store';
 import { IconPill, TextButton } from './components';
@@ -31,7 +32,9 @@ export const MapPanel = memo(function MapPanel({ height, fullScreen = false, onE
   const [locating, setLocating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now);
-  const fix = location && usableFix(location, Math.max(now, Date.now())) ? location : null;
+  const [located,setLocated] = useState<LocationFix|null>(null);
+  const latest = location && (!located || location.timestamp >= located.timestamp) ? location : located;
+  const fix = latest && displayableFix(latest, Math.max(now, Date.now())) ? latest : null;
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 5_000);
@@ -48,21 +51,25 @@ export const MapPanel = memo(function MapPanel({ height, fullScreen = false, onE
   useEffect(() => {
     if (ready && route && (phase === 'idle' || previewing)) {
       setFollowing(false);
-      map.current?.fitToCoordinates(route.points, { edgePadding: { top: 24, right: 24, bottom: 32, left: 24 }, animated: true });
+      if (destination) map.current?.animateToRegion({ ...destination.point, latitudeDelta: 0.005, longitudeDelta: 0.005 }, 300);
+      else map.current?.fitToCoordinates(route.points, { edgePadding: { top: 24, right: 24, bottom: 32, left: 24 }, animated: true });
     }
-  }, [ready, route, phase, previewing]);
+  }, [ready, route, phase, previewing, destination]);
   useEffect(() => { if (phase === 'walking') setFollowing(true); }, [phase]);
 
   useEffect(() => {
-    if (ready && destination && !route) { setFollowing(false); map.current?.animateToRegion({ ...destination.point, latitudeDelta: 0.005, longitudeDelta: 0.005 }, 300); }
-  }, [ready, destination, route]);
+    if (ready && destination && (!route || (!fix && phase === 'walking'))) {
+      if (phase !== 'walking') setFollowing(false);
+      map.current?.animateToRegion({ ...destination.point, latitudeDelta: 0.005, longitudeDelta: 0.005 }, 300);
+    }
+  }, [ready, destination, route, fix, phase]);
 
   const locate = async () => {
     if (locating) return;
     setFollowing(true); setError(null);
     // Always reacquire when Recenter is requested, so a stale position is not represented as current.
     const pending = new AbortController(); request.current?.abort(); request.current = pending; setLocating(true);
-    try { await controller.journey.refreshLocation(pending.signal); }
+    try { const estimate=await currentLocation(pending.signal,{allowApproximate:true});if(!pending.signal.aborted)setLocated(estimate); }
     catch (e) { if (!pending.signal.aborted) setError(e instanceof Error ? e.message : 'Location unavailable. Try again.'); }
     finally { if (!pending.signal.aborted) setLocating(false); }
   };
@@ -73,9 +80,9 @@ export const MapPanel = memo(function MapPanel({ height, fullScreen = false, onE
   };
 
   return <View style={fullScreen ? { height } : undefined}>
-    {nativeMapConfigured ? <View style={{ height }}>
+    {nativeMapConfigured && (destination || fix || route) ? <View style={{ height }}>
       <MapView key={attempt} ref={map} style={StyleSheet.absoluteFill} provider={PROVIDER_GOOGLE}
-        initialRegion={{ latitude: 0, longitude: 0, latitudeDelta: 120, longitudeDelta: 120 }}
+        initialRegion={destination?.point ?? fix ?? route!.points[0]}
         userInterfaceStyle="light" rotateEnabled pitchEnabled={false} showsCompass
         scrollEnabled={fullScreen || !onExpand} zoomEnabled={fullScreen || !onExpand}
         // Keep attribution below the route card and to the left of the collapse button.
@@ -86,7 +93,7 @@ export const MapPanel = memo(function MapPanel({ height, fullScreen = false, onE
         onPress={event => { if (event.nativeEvent.action !== 'marker-press') onInteract?.(); }}
         onPoiClick={event => { if (event.nativeEvent.placeId) onPlaceId?.(event.nativeEvent.placeId); }}
         onRegionChangeComplete={(_, details) => { if (details.isGesture) setFollowing(false); }}
-        accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        accessibilityLabel="Walking map. Use Route overview for written instructions, or Nearby places to browse places as a list.">
         {preview?.page === 'results' && preview.candidates.map((place, i) => <Marker key={place.id} coordinate={place.point}
           title={`${i + 1}. ${place.name}`} description={place.address} onPress={() => onCandidate?.(place)} />)}
         {route && <Polyline coordinates={route.points} strokeColor="#1464C0" strokeWidth={5} />}
@@ -96,11 +103,11 @@ export const MapPanel = memo(function MapPanel({ height, fullScreen = false, onE
       </MapView>
       {!fullScreen && onExpand && <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button"
         accessibilityLabel="Open full-screen map" onPress={onExpand} />}
-    </View> : <Text style={[type.bodyLarge, styles.message]}>Map unavailable in this build. Camera assistance remains available.</Text>}
+    </View> : <Text style={[type.bodyLarge, styles.message]}>{nativeMapConfigured ? 'Choose a destination or use Locate me to open a street-level map.' : 'Map unavailable in this build. Camera assistance remains available.'}</Text>}
     <ScrollView accessibilityElementsHidden={toolsHidden} importantForAccessibility={toolsHidden ? 'no-hide-descendants' : 'auto'} style={[toolsHidden && { display: 'none' }, fullScreen ? [styles.floatingTools, { maxHeight: height * 0.3 }] : undefined]}>
     <View style={[styles.tools, stacked && styles.toolsStacked]}>
-      <Text style={[type.labelMedium, { width: '100%', paddingTop: 8 }]}>
-        {locating ? 'Checking location…' : fix ? `Location accuracy: about ${Math.round(fix.accuracy ?? 0)} m` : 'Current location unavailable'}
+      <Text aria-live="polite" aria-atomic={true} style={[type.labelMedium, { width: '100%', paddingTop: 8 }]}>
+        {locating ? 'Checking location…' : fix ? `Your estimated position: ${fix.latitude.toFixed(5)}, ${fix.longitude.toFixed(5)}. Accuracy: about ${Math.round(fix.accuracy ?? 0)} m${(fix.accuracy??0)>25?' — approximate; not accurate enough for walking distance updates.':''}` : 'Current location unavailable. Use Locate me to request a fresh position.'}
       </Text>
       <IconPill icon="explore" label="North up" onPress={() => map.current?.animateCamera({ heading: 0, pitch: 0 })} />
       <IconPill icon={locating ? "close" : "my-location"} label={locating ? 'Cancel location check' : fix ? 'Recenter' : 'Locate me'} onPress={locating

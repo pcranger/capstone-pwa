@@ -43,16 +43,29 @@ describe('illuminated symbol verification', () => {
     const image=blank();paint(image,(x,y)=>(x-50)**2+(y-90)**2<20**2,phase==='GREEN'?[0,240,100]:[240,0,0]);
     expect(verifyPedestrianSymbol(image,whole,phase)).toMatchObject({accepted:false,reason:'round-or-wide-lamp'});
   });
-  it('rejects an upright arrow with a shaft instead of two legs',()=>{
-    const image=blank();paint(image,(x,y)=>y>=15&&y<45&&Math.abs(x-50)<y-14||y>=40&&y<110&&x>=44&&x<56,[0,240,100]);
-    expect(verifyPedestrianSymbol(image,whole,'GREEN').accepted).toBe(false);
+  it.each(['GREEN','RED'] as const)('rejects an upright %s arrow with a shaft instead of two legs',phase=>{
+    const image=blank();paint(image,(x,y)=>y>=15&&y<45&&Math.abs(x-50)<y-14||y>=40&&y<110&&x>=44&&x<56,phase==='RED'?[240,0,0]:[0,240,100]);
+    expect(verifyPedestrianSymbol(image,whole,phase).accepted).toBe(false);
   });
-  it('rejects an elliptical vehicle lamp even when its height exceeds its width',()=>{
-    const image=blank();paint(image,(x,y)=>(x-50)**2/12**2+(y-65)**2/30**2<1,[0,240,100]);
-    expect(verifyPedestrianSymbol(image,whole,'GREEN').accepted).toBe(false);
+  it.each(['GREEN','RED'] as const)('rejects an elliptical %s vehicle lamp even when its height exceeds its width',phase=>{
+    const image=blank();paint(image,(x,y)=>(x-50)**2/12**2+(y-65)**2/30**2<1,phase==='RED'?[240,0,0]:[0,240,100]);
+    expect(verifyPedestrianSymbol(image,whole,phase).accepted).toBe(false);
   });
   it('does not turn an unresolved colour into a verified signal',()=>{
     expect(verifyPedestrianSymbol(blank(),whole,'UNKNOWN').accepted).toBe(false);
+  });
+  it('checks the bottom foot rows of a small standing pedestrian symbol',()=>{
+    const image=blank();
+    paint(image,(x,y)=>y>=10&&y<15&&x>=44&&x<50||y>=15&&y<32&&x>=40&&x<53||y>=32&&y<34&&(x>=40&&x<45||x>=48&&x<53),[240,0,0]);
+    expect(verifyPedestrianSymbol(image,whole,'RED')).toMatchObject({accepted:true,reason:'pedestrian-silhouette',splitRows:2});
+  });
+  it('retains one genuine bottom-row gap in small red standing figures but not green',()=>{
+    const image=blank();
+    paint(image,(x,y)=>y>=10&&y<15&&x>=44&&x<50||y>=15&&y<32&&x>=40&&x<53||y>=32&&y<34&&(x>=40&&x<45||x>=48&&x<53),[240,0,0]);
+    paint(image,(x,y)=>y===32&&x>=45&&x<48,[240,0,0]);
+    expect(verifyPedestrianSymbol(image,whole,'RED')).toMatchObject({accepted:true,reason:'pedestrian-silhouette',splitRows:1});
+    const green=blank();for(let i=0;i<image.data.length;i+=4)if(image.data[i])green.data.set([0,240,100,255],i);
+    expect(verifyPedestrianSymbol(green,whole,'GREEN').accepted).toBe(false);
   });
   it('retains a blurred tiny red upright figure but does not apply that exception to green',()=>{
     const image=blank();

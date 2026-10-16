@@ -44,6 +44,7 @@ interface Props {
     details: { isGesture: boolean },
   ) => void;
   accessibilityElementsHidden?: boolean;
+  accessibilityLabel?: string;
   importantForAccessibility?: string;
 }
 export default class MapView extends React.Component<
@@ -59,13 +60,18 @@ export default class MapView extends React.Component<
         if (!this.alive || !this.div.current) return;
         const map = new google.maps.Map(this.div.current, {
           center: point(this.props.initialRegion),
-          zoom: 2,
+          zoom: 17,
           disableDefaultUI: true,
+          zoomControl: true,
           gestureHandling: "greedy",
           clickableIcons: true,
+          keyboardShortcuts: true,
         });
-        this.setState({ map });
-        this.props.onMapReady();
+        const reportZoom = () => { if(this.div.current)this.div.current.dataset.mapZoom=String(map.getZoom?.()??17); };
+        reportZoom();map.addListener('zoom_changed',reportZoom);
+        this.setState({ map }, () => {
+          if (this.alive) this.props.onMapReady();
+        });
         google.maps.event.addListenerOnce(
           map,
           "tilesloaded",
@@ -115,6 +121,9 @@ export default class MapView extends React.Component<
         <div
           ref={this.div}
           aria-hidden={this.props.accessibilityElementsHidden}
+          inert={this.props.accessibilityElementsHidden}
+          role="region"
+          aria-label={this.props.accessibilityLabel ?? 'Interactive map'}
           style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: this.props.mapPadding?.bottom ?? 0 }}
         />
         <MapContext.Provider value={this.state.map}>

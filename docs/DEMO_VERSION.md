@@ -2,15 +2,23 @@
 
 # CrossWise demo version
 
+## 15 October 2026 update
+
+Main now combines Google Maps and route guidance, focuses pins at street level, uses Road crossing as the camera entry, and applies a shared dark theme throughout. Settings offers a compact Developer camera view with car counts and pedestrian light/countdown indicators. The old diagnostic popup and other vehicle fields are removed from this view. Yellow means possible blinking estimated from repeated detections; it does not establish a safe crossing.
+
+Permission states are checked at launch instead of trusting a saved completion flag. Missing camera, microphone and location access is requested automatically after the voice startup screen closes. Agree and continue starts first-time motion access directly from the existing tap; returning users automatically check existing motion access. A browser that still requires a tap exposes Allow motion or the other permission buttons. Setup opens Home automatically after the last available permission is granted; Continue to CrossWise is the first control after the setup heading for an accessible manual exit. English recognition installation starts during the startup screen on supported browsers; progress is indeterminate because the browser exposes neither byte counts nor a fixed pack size.
+
+The pre-redesign local baseline is preserved on dev; the new version is deployed to main. The dated verification sections below are historical. See [deployment record](DEV_DEPLOYMENT.md).
+
 Date: 13 October 2026. Full-version checkpoint: `5b92373`. Demo branch: `codex/demo-version`.
 
 ## Scope
 
-Keep destination search/review, local Home/saved destinations, walking instructions/map, Stroll, unchanged detector, manual crossing, nearby search/optional narration, arrival choices, voice/buttons, accessible feedback/text, permission recovery and offline application/model caching.
+Keep destination search/review, local Home/saved destinations, walking instructions/map, Road crossing, unchanged detector, manual crossing, nearby search/optional narration, arrival choices, voice/buttons, accessible feedback/text, permission recovery and offline application/model caching.
 
 Remove account/cloud backup/sharing/check-ins/photo questions/history/quota/research access/insurance, special areas, unsupported body-direction checks and manufacturer headset previews. Remove sixteen unsupported category rows and three unsupported route preferences. Replace seven speech levels with Slow/Normal/Fast. Simplify nearby settings to four groups and None/50/100/200 metres; a previously saved radius stays visible until changed. Legacy unsupported route preferences load as distance without deleting user data.
 
-Remove automatic Stroll startup and recording auto-start. Hide coordinate entry behind Advanced location editing. Home has Route guidance, Stroll, Settings and Help. Walking controls are directly visible; tools contain only in-walk actions. Preserve crossing completion, route replacement cancellation, freshness checks and camera/background lifecycle.
+Remove automatic Road crossing startup and recording auto-start. Hide coordinate entry behind Advanced location editing. Home has Route guidance, Road crossing, Settings and Help. Walking controls are directly visible; tools contain only in-walk actions. Preserve crossing completion, route replacement cancellation, freshness checks and camera/background lifecycle.
 
 ## Presenter build
 
@@ -32,13 +40,13 @@ This output is separate from `dist/` and is not deployed by the normal Dockerfil
 
 ## Rehearsal
 
-1. Open Home; explain Route guidance and Stroll.
+1. Complete the first-open permission setup, then open Home and explain Route guidance and Road crossing.
 2. Search/select a saved destination, confirm identity and review the route.
 3. Start walking, repeat an instruction, pause and resume.
 4. Start camera assistance and show supported detection/status.
 5. Demonstrate crossing controls and explicit far-footpath completion.
 6. Open Nearby or route overview; return to the same walk.
-7. Confirm arrival and end the walk; demonstrate Stroll briefly if useful.
+7. Confirm arrival and end the walk; demonstrate Road crossing briefly if useful.
 
 Use controlled conditions for rehearsal. Synthetic camera fixtures do not establish validated outdoor performance. No screen claims a safe crossing, verified pedestrian signal or reliable body alignment.
 

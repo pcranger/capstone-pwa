@@ -5,7 +5,7 @@ import { currentLocation } from './location';
 import { controller } from '../state/controller';
 import { useStore } from '../state/store';
 import { DESTINATION_CAPACITY, type SavedPlace } from '../nav/savedPlaces';
-import { searchPlaces, placeDetails, walkingRoute, validPoint, usableFix, distanceMeters, WALKING_WARNING, type GeoPoint, type PlaceCandidate } from '../nav/navigation';
+import { searchPlaces, placeDetails, walkingRoute, validPoint, displayableFix, distanceMeters, WALKING_WARNING, type GeoPoint, type LocationFix, type PlaceCandidate } from '../nav/navigation';
 import { compassDirection } from '../nav/nearby';
 import { ROUTE_PREFERENCES, routePreference, setRoutePreference, supportsPreference, type RoutePreference } from '../nav/routePreferences';
 import { services } from '../config/services';
@@ -23,7 +23,8 @@ export function PlacesScreen({ onBack, onWalk, intent = 'navigate', onMyRoutes, 
   const [view, setView] = useState<View>(intent === 'home' ? 'home' : initialSelected ? initialEntry ? 'detail' : 'review' : 'list');
   const [flow, setFlow] = useState<Intent>(intent === 'home' || initialEntry?.role === 'home' ? 'home' : intent === 'manage' ? 'save' : 'navigate');
   const [query, setQuery] = useState(''), [results, setResults] = useState<PlaceCandidate[]>([]);
-  const [searchOrigin,setSearchOrigin] = useState<GeoPoint|null>(null), [capturedAt,setCapturedAt] = useState<number|null>(null);
+  const [searchStatus, setSearchStatus] = useState(''), [entranceStatus, setEntranceStatus] = useState('');
+  const [searchOrigin,setSearchOrigin] = useState<LocationFix|null>(null), [capturedAt,setCapturedAt] = useState<number|null>(null);
   const [selected, setSelected] = useState<PlaceCandidate | null>(initialSelected && initialEntry ? { ...initialSelected, name: placeName(initialEntry) } : initialSelected), [entryId, setEntryId] = useState<string | null>(initialEntry?.placeId ?? null);
   const [alias, setAlias] = useState(initialEntry ? placeName(initialEntry) : initialSelected?.name ?? ''), [lat, setLat] = useState(''), [lng, setLng] = useState(''), [increment, setIncrement] = useState(5);
   const [originalPoint, setOriginalPoint] = useState<GeoPoint | null>(null), [accuracy, setAccuracy] = useState<number | null>(null);
@@ -44,7 +45,7 @@ export function PlacesScreen({ onBack, onWalk, intent = 'navigate', onMyRoutes, 
   const go = (next: View) => { ++generation.current; request.current?.abort(); setBusy(false); setError(''); setView(next); };
   const base = () => go(intent === 'home' ? 'home' : 'list');
   const back = () => {
-    if (busy) { ++generation.current; request.current?.abort(); setBusy(false); controller.planner.cancel(); return; }
+    if (busy) { ++generation.current; request.current?.abort(); setBusy(false); setSearchStatus('Search canceled.'); controller.planner.cancel(); return; }
     const leave = () => {
       if (view === 'home' && intent !== 'home') go('list');
       else if (view === 'list' || view === 'home') { if(planner.replacing)controller.cancelPlanning(); onBack(); }
@@ -64,12 +65,16 @@ export function PlacesScreen({ onBack, onWalk, intent = 'navigate', onMyRoutes, 
     finally { if (mounted.current && generation.current === id) setBusy(false); }
   };
   const acknowledge = (text: string) => { setMessage(text); setView('ack'); setError(''); };
-  const openSearch = (next: Intent) => { setSearchForEntrance(false); setFlow(next); setEntryId(null); setSelected(null); setResults([]); go('search'); };
+  const openSearch = (next: Intent) => { setSearchStatus(''); setSearchForEntrance(false); setFlow(next); setEntryId(null); setSelected(null); setResults([]); go('search'); };
   const search = () => {
     if (!query.trim()) { setError('Enter a place name or address.'); return; }
-    const fix=controller.journey.location.value;
-    const from=searchOrigin ?? (fix && usableFix(fix,Date.now()) ? fix : null); setSearchOrigin(from); setResults([]);
-    void run(signal => searchPlaces(query, from, services.mapsRestApiKey, signal), places => setResults(places));
+    setResults([]);setSearchStatus('Checking your location and searching destinations…');
+    void run(async signal => {
+      let from:LocationFix|null=null;
+      try { from=await currentLocation(signal,{allowApproximate:true}); }
+      catch { if(signal.aborted)throw new Error('Search canceled.');const fix=controller.journey.location.value;const cached=fix&&displayableFix(fix,Date.now())?fix:searchOrigin;from=cached&&displayableFix(cached,Date.now())?cached:null; }
+      return {from,places:await searchPlaces(query,from,services.mapsRestApiKey,signal)};
+    }, ({from,places}) => {setSearchOrigin(from);setResults(places);setSearchStatus(`${places.length} destinations found. ${from?'Closest first by straight-line distance from your estimated location.':'Location unavailable. Results use Google relevance; allow location to sort closest first.'}`);});
   };
   const resolve = (record: SavedPlace) => {
     setEntryId(record.placeId); setFlow(record.role === 'home' ? 'home' : 'navigate');
@@ -111,7 +116,7 @@ export function PlacesScreen({ onBack, onWalk, intent = 'navigate', onMyRoutes, 
     if (!validDraft) { setError('Enter coordinates before moving the entrance.'); return; }
     const latitude = point!.latitude + north * increment / 111_320;
     const longitude = point!.longitude + east * increment / (111_320 * Math.max(0.01, Math.cos(point!.latitude * Math.PI / 180)));
-    const next = { latitude, longitude }; if (validPoint(next)) coordinates(next);
+    const next = { latitude, longitude }; if (validPoint(next)) { coordinates(next); setEntranceStatus(`Moved ${increment} metres ${north > 0 ? 'north' : north < 0 ? 'south' : east > 0 ? 'east' : 'west'}. Entrance coordinates: ${coordinateText(next)}.`); }
   };
   const title = ({ list: intent === 'manage' ? 'Destinations' : 'Route guidance', home: 'Home', search: flow === 'home' ? 'Home address' : 'Search destination', review: 'Confirm place', detail: entry?.role === 'home' ? 'Home detail' : 'Destination detail', location:'Current location', name: 'Name destination', edit: 'Edit entrance location', route: 'Route review', ack: 'Saved changes' })[view];
   return <Page title={title} onBack={back}>
@@ -143,10 +148,12 @@ export function PlacesScreen({ onBack, onWalk, intent = 'navigate', onMyRoutes, 
       {destinations.length > 3 && <Action secondary onClick={() => setAll(v => !v)}>{all ? 'Show recent three' : `All ${destinations.length} destinations`}</Action>}
     </>}
     {view === 'search' && <>
-      <form onSubmit={e => { e.preventDefault(); search(); }}><label className="cw-field">{flow === 'home' ? 'Home address' : 'Place name or address'}<input value={query} onChange={e => setQuery(e.target.value)} maxLength={240} autoComplete="street-address" /></label><button className="cw-action" type="submit" disabled={busy || !query.trim()}>Search</button><Action secondary onClick={() => { setQuery(''); setResults([]); }}>Clear</Action></form>
+      <p role="status" aria-atomic="true">{error ? '' : searchStatus}</p>
+      <form onSubmit={e => { e.preventDefault(); search(); }}><label className="cw-field">{flow === 'home' ? 'Home address' : 'Place name or address'}<input value={query} onChange={e => setQuery(e.target.value)} maxLength={240} autoComplete="street-address" /></label><button className="cw-action" type="submit" disabled={busy || !query.trim()}>Search</button><Action secondary onClick={() => { setQuery(''); setResults([]); setSearchStatus(''); }}>Clear</Action></form>
       {!results.length && !busy && <p>Include a street or suburb to distinguish places with similar names.</p>}
-      <Action secondary disabled={busy} onClick={() => { void run(signal => currentLocation(signal), fix => setSearchOrigin(fix)); }}>Use current location for search</Action>
-      {searchOrigin && <p>Search near {coordinateText(searchOrigin)}. Result distances refer to this search origin.</p>}
+      <Action secondary disabled={busy} onClick={() => { void run(signal => currentLocation(signal,{allowApproximate:true}), fix => {setSearchOrigin(fix);setResults([]);setSearchStatus('Location updated. Search again for the closest results.');}); }}>Use current location for search</Action>
+      {searchOrigin && <p>Search near {coordinateText(searchOrigin)} · accuracy about {Math.round(searchOrigin.accuracy??0)} metres. Distances are straight-line estimates, not walking distances.</p>}
+      {!!results.length&&!searchForEntrance&&<PlaceMap point={results[0].point} title="Destination search results" markers={results.map(p=>({point:p.point,title:p.name,onSelect:()=>{setSelected(p);setEntryId(null);setAlias(flow==='home'?'Home':p.name);go('review');}}))}/>}
       {results.map((p, i) => <Row key={p.id} label={`${i + 1}. ${p.name}`} detail={`${p.address}${searchOrigin ? ` · ${Math.round(distanceMeters(searchOrigin,p.point))} metres ${compassDirection(searchOrigin,p.point)}` : ''}`} onClick={() => { if (searchForEntrance) { coordinates(p.point); setSearchForEntrance(false); go('edit'); } else { setSelected(p); setEntryId(null); setAlias(flow === 'home' ? 'Home' : p.name); go('review'); } }} />)}
       {!!results.length && <p>Google Maps</p>}
     </>}
@@ -178,6 +185,7 @@ export function PlacesScreen({ onBack, onWalk, intent = 'navigate', onMyRoutes, 
       {validDraft && <PlaceMap point={point!} title={alias || 'Entrance'} onChange={coordinates} />}
       <label className="cw-field">Move distance<select value={increment} onChange={e => setIncrement(Number(e.target.value))}>{[1,5,10].map(n => <option key={n} value={n}>{n} metres</option>)}</select></label>
       <div className="cw-actions">{[['North',1,0],['South',-1,0],['East',0,1],['West',0,-1]].map(([name,n,e]) => <Action key={name} secondary disabled={!validDraft} onClick={() => nudge(Number(n),Number(e))}>Move {name}</Action>)}</div>
+      <p role="status" aria-atomic="true">{entranceStatus}</p>
       <Action secondary disabled={busy} onClick={() => { void run(signal => currentLocation(signal), fix => { coordinates(fix); setAccuracy(fix.accuracy); }); }}>Use current location</Action>
       <Action secondary onClick={() => { setQuery(''); setResults([]); setSearchForEntrance(true); go('search'); }}>Search address instead</Action>
       <Action secondary disabled={!originalPoint} onClick={() => coordinates(originalPoint)}>Reset location</Action>
@@ -187,11 +195,11 @@ export function PlacesScreen({ onBack, onWalk, intent = 'navigate', onMyRoutes, 
     {view === 'route' && selected && <>
       <h2>{selected.name}</h2>
       {controller.journey.location.value && <p>Origin accuracy about {Math.round(controller.journey.location.value.accuracy ?? 0)} metres. Start rechecks your current location.</p>}
-      <fieldset><legend>Route preference</legend>{ROUTE_PREFERENCES.map(p => <label key={p.id} className="cw-radio"><input type="radio" name="route-preference" checked={preference === p.id} onChange={() => { try { setRoutePreference(p.id as RoutePreference); void prepare(); } catch { setError('Could not save route preference.'); } }} />{p.label}{p.supported ? '' : ' — standard fallback required'}</label>)}</fieldset>
+      <fieldset><legend>Route preference</legend>{ROUTE_PREFERENCES.filter(p=>p.supported).map(p => <label key={p.id} className="cw-radio"><input type="radio" name="route-preference" checked={preference === p.id} onChange={() => { try { setRoutePreference(p.id as RoutePreference); void prepare(); } catch { setError('Could not save route preference.'); } }} />{p.label}{p.supported ? '' : ' — standard fallback required'}</label>)}</fieldset>
       {!supportsPreference(preference) && !planner.route && <Notice>This provider cannot verify stairs, covered paths or paths near main roads. A standard route does not apply this preference.</Notice>}
       {!supportsPreference(preference) && !planner.route && <Action disabled={busy} onClick={fallback}>Use standard route</Action>}
       {planner.route && <>
-        <p>{Math.round(planner.route.distanceMeters)} metres · About {Math.max(1,Math.round(planner.route.durationSeconds / 60))} minutes</p>
+        <p role="status" aria-atomic="true">Route ready. {Math.round(planner.route.distanceMeters)} metres · About {Math.max(1,Math.round(planner.route.durationSeconds / 60))} minutes</p>
         <p>Requested: {ROUTE_PREFERENCES.find(p => p.id === planner.route?.requestedPreference)?.label ?? 'Standard walking route'}. Applied: {planner.route.appliedPreference === 'standard' ? 'Standard route; requested preference unavailable' : `${ROUTE_PREFERENCES.find(p => p.id === planner.route?.appliedPreference)?.label ?? 'Standard'} of available routes`}.</p>
         <PlaceMap point={selected.point} title={selected.name} route={planner.route.points} />
         {!!planner.route.alternatives?.length && <fieldset><legend>Available routes</legend>{[planner.route,...planner.route.alternatives].map((r,i, routes) => <Action key={i} secondary={i !== 0} onClick={() => controller.planner.review(selected,{...r,alternatives:routes.filter((_,j) => i !== j).map(({ alternatives: _alternatives, ...rest }) => rest)})}>Route {i + 1}: {Math.round(r.distanceMeters)} metres, {Math.round(r.durationSeconds/60)} minutes{i === 0 ? ' · selected' : ''}</Action>)}</fieldset>}

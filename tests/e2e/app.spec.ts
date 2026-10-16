@@ -1,9 +1,13 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "./fixtures";
 test.beforeEach(async ({ page, browserName }, info) => {
-  // These regression cases explicitly open Stroll and the optional presenter tools.
+  // These regression cases explicitly open Road crossing and the optional presenter tools.
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'SpeechRecognition', { value: undefined, configurable: true });
+  });
   await page.addInitScript(() => {
     if (!localStorage.getItem('crosswise_product_preferences_v1'))
       localStorage.setItem('crosswise_product_preferences_v1', JSON.stringify({version:1,autoStroll:true,termsVersion:'2026-10-13'}));
+    localStorage.setItem('crosswise_permission_setup_v1', 'done');
   });
   if (!info.title.startsWith("live "))
     await page.addInitScript(() => {
@@ -22,8 +26,10 @@ test.beforeEach(async ({ page, browserName }, info) => {
     };
   });
   await page.goto("/");
+  await expect(page.getByRole('region', { name: 'Preparing offline voice' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Preparing offline voice' })).toHaveCount(0);
   const agree=page.getByRole('button',{name:'Agree and continue',exact:true});if(await agree.count())await agree.click();
-  await page.getByRole('button',{name:'Stroll',exact:true}).click();
+  await page.getByRole('button',{name:'Road crossing',exact:true}).click();
   if(info.title.startsWith('live ')&&browserName!=='webkit')await allowCamera(page);
 });
 async function allowCamera(page:Page){await page.getByRole('button',{name:'Allow camera',exact:true}).click();}
@@ -38,7 +44,7 @@ async function noOverflow(page: Page) {
     ),
   ).toBe(true);
 }
-test("configured Stroll retains the original collapsed camera controls", async ({
+test("configured Road crossing retains the original collapsed camera controls", async ({
   page,
 }) => {
   await expect(
@@ -140,7 +146,7 @@ test("guide and practice return to Settings and keep home controls intact", asyn
 test("phone Back follows the screen hierarchy", async ({ page }) => {
  await settings(page);await page.getByRole('button',{name:'Practice the cues',exact:true}).click();await page.goBack();await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeVisible();await page.goBack();await expect(page.getByRole('heading',{name:'Presenter setup',exact:true})).toBeVisible();await page.goBack();await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeVisible();await page.goBack();await expect(page.getByRole('button',{name:'Settings',exact:true})).toBeVisible();
 });
-test("map drawer expands, searches truthfully, and returns to camera", async ({
+test("map drawer opens route guidance and returns to camera", async ({
   page,
 }) => {
   await page.getByRole("button", { name: "Show map", exact: true }).click();
@@ -154,26 +160,18 @@ test("map drawer expands, searches truthfully, and returns to camera", async ({
     page.getByRole("button", { name: "Settings", exact: true }),
   ).toHaveCount(0);
   await page
-    .getByRole("button", { name: "Expand destination panel", exact: true })
+    .getByRole("button", { name: "Expand walking panel", exact: true })
     .click();
   await expect(
     page.getByRole("button", {
-      name: "Collapse destination panel",
+      name: "Collapse walking panel",
       exact: true,
     }),
   ).toBeVisible();
-  await page
-    .getByRole("textbox", { name: "Destination name and suburb", exact: true })
-    .fill("Library Sydney");
-  await page
-    .getByRole("button", { name: "Search places", exact: true })
-    .click();
-  await expect(page.getByRole("alert")).toContainText(
-    "Walking routes are not configured",
-  );
-  await page
-    .getByRole("button", { name: "Close full-screen map", exact: true })
-    .click();
+  await expect(page.getByRole("textbox", { name: "Destination name and suburb", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "Choose destination", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Route guidance", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "‹ Back", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Show map", exact: true }),
   ).toBeVisible();
@@ -189,7 +187,7 @@ test("preferences persist and developer mode exposes original tools", async ({
     page.getByRole("heading", { name: "VEHICLE BOXES", exact: true }),
   ).toBeVisible();
   await page.reload();
-  await page.getByRole("button", { name: "Stroll", exact: true }).click();
+  await page.getByRole("button", { name: "Road crossing", exact: true }).click();
   await settings(page);
   await expect(
     page.getByRole("switch", { name: "Speech", exact: true }),
@@ -212,7 +210,7 @@ test("voice failure offers the same recovery and help navigation", async ({
     });
   });
   await page.reload();
-  await page.getByRole("button", { name: "Stroll", exact: true }).click();
+  await page.getByRole("button", { name: "Road crossing", exact: true }).click();
   await page.getByRole("button", { name: "Voice", exact: true }).click();
   await expect(
     page
@@ -264,7 +262,7 @@ test("offline reload includes original phone screens and all model shards", asyn
   });
   await context.setOffline(true);
   await page.reload();
-  await page.getByRole("button", { name: "Stroll", exact: true }).click();
+  await page.getByRole("button", { name: "Road crossing", exact: true }).click();
   await settings(page);
   await page
     .getByRole("button", { name: "Practice the cues", exact: true })
@@ -383,7 +381,7 @@ test("live offline camera inference reloads from the PWA cache", async ({
   });
   await context.setOffline(true);
   await page.reload();
-  await page.getByRole("button", { name: "Stroll", exact: true }).click();
+  await page.getByRole("button", { name: "Road crossing", exact: true }).click();
   await allowCamera(page);
   await page
     .getByRole("button", { name: "More controls", exact: true })
@@ -455,7 +453,7 @@ test.describe("model download recovery", () => {
       r.fulfill({ status: 503, body: "Unavailable" }),
     );
     await page.reload();
-    await page.getByRole("button", { name: "Stroll", exact: true }).click();
+    await page.getByRole("button", { name: "Road crossing", exact: true }).click();
     await allowCamera(page);
     await expect(
       page.getByRole("button", { name: "Retry camera", exact: true }),
@@ -514,9 +512,15 @@ test.describe('configured route integration',()=>{
  // This WebKit runner restores its native location object during reload, so
  // reinstall the same fixture in the loaded main world before route actions.
  await page.evaluate(installRouteLocation);
- await page.getByRole('button',{name:'Stroll',exact:true}).click();
- await page.getByRole('button',{name:'More controls',exact:true}).click();await page.getByRole('button',{name:'Show map',exact:true}).click();await page.getByRole('textbox',{name:'Destination name and suburb',exact:true}).fill('Test Library Sydney');await page.getByRole('button',{name:'Search places',exact:true}).click();await page.getByRole('button',{name:/^1\. Test Library/}).click();await page.getByRole('button',{name:'Confirm place',exact:true}).click();await page.getByRole('button',{name:'Start journey',exact:true}).click();
+ await page.getByRole('button',{name:'Road crossing',exact:true}).click();
+ await page.getByRole('button',{name:'More controls',exact:true}).click();await page.getByRole('button',{name:'Show map',exact:true}).click();await page.getByRole('button',{name:'Choose destination',exact:true}).click();await expect(page.getByRole('heading',{name:'Route guidance',exact:true})).toBeVisible();await page.getByRole('button',{name:'Search destination',exact:true}).click();await page.getByLabel('Place name or address',{exact:true}).fill('Test Library Sydney');await page.getByRole('button',{name:'Search',exact:true}).click();await page.getByRole('button',{name:/^1\. Test Library/}).click();await page.getByRole('button',{name:'Confirm place and review route',exact:true}).click();await page.getByRole('button',{name:'Start journey',exact:true}).click();
  await expect(page.getByRole('button',{name:'Pause',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Close full-screen map',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'Show map',exact:true}).click();
+ await page.getByRole('button',{name:'Change destination',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Route guidance',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Cancel destination change',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Resume',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Resume',exact:true}).click();
  await page.getByRole('button',{name:'Pause',exact:true}).click();await expect(page.getByRole('button',{name:'Resume',exact:true})).toBeVisible();await page.getByRole('button',{name:'Resume',exact:true}).click();await expect(page.getByRole('button',{name:'Pause',exact:true})).toBeVisible();await page.getByRole('button',{name:'Pause',exact:true}).click();await page.getByRole('button',{name:'End journey',exact:true}).click();await expect(page.getByRole('button',{name:'Start camera assistance',exact:true})).toBeVisible();
 });
 
@@ -529,7 +533,7 @@ for(const cpu of [false,true]) test(`live ${cpu?'CPU option':'WebGPU unavailable
   else Object.defineProperty(navigator,'gpu',{value:undefined,configurable:true});
  },{cpu});
  await page.reload();
- await page.getByRole('button',{name:'Stroll',exact:true}).click();
+ await page.getByRole('button',{name:'Road crossing',exact:true}).click();
  await allowCamera(page);
  await page.getByRole('button',{name:'More controls',exact:true}).click();
  await expect.poll(async()=>{await page.getByRole('button',{name:'Start camera assistance',exact:true}).click();return page.getByRole('button',{name:'I’m crossing',exact:true}).count();},{timeout:45000,intervals:[1000]}).toBe(1);
@@ -551,7 +555,7 @@ test('live iPhone texture workaround preserves portrait and landscape frame orie
   };
  });
  await page.reload();
- await page.getByRole('button',{name:'Stroll',exact:true}).click();
+ await page.getByRole('button',{name:'Road crossing',exact:true}).click();
  await allowCamera(page);
  const canvas=page.locator('canvas[data-camera-renderer]');
  await expect(canvas).toHaveAttribute('data-camera-source','oriented-canvas');

@@ -1,10 +1,9 @@
-import { PedestrianOverlay } from './PedestrianOverlay';
+import { PedestrianOverlay, pedestrianLabel } from './PedestrianOverlay';
 import { pedestrianStatus, PEDESTRIAN_MAX_AGE_MS } from '../perception/pedestrianPolicy';
-import { PRESENTER_TOOLS } from '../product/demoScope';
 import { useEffect, useRef, useState } from 'react';
 import { MaterialIcons } from '../platform/icons';
-import { DeveloperTelemetry } from './DeveloperTelemetry';
-import { VehicleVisibilityControls } from './VehicleVisibilityControls';
+import { CameraIndicators } from './CameraIndicators';
+import { PedestrianIndicatorTracker } from '../perception/pedestrianIndicator';
 import { perceptionMessage } from '../perception/pipelineHealth';
 import { nowMs } from '../core/geometry';
 import { Linking, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -15,10 +14,10 @@ import { Side } from '../crossing/hazardMonitor';
 import { SignalPhase } from '../signal/signalPhaseTracker';
 import { InterfaceMode } from '../settings/settings';
 import { controller } from '../state/controller';
-import { useStore, useSampledStore } from '../state/store';
+import { useStore } from '../state/store';
 import { S } from '../strings';
 import { TextButton } from './components';
-import { DetectionOverlay, SegmentationOverlay } from './Overlays';
+import { DetectionOverlay } from './Overlays';
 import { Colors, useType } from './theme';
 
 /** One full-screen camera surface. UI overlays never resize the camera or its box coordinate space. */
@@ -29,16 +28,14 @@ export function MainScreen({ height, topInset = 0, bottomInset = 0, hidden = fal
   const window = useWindowDimensions();
   const settings = useStore(controller.settings);
   const ui = useStore(controller.ui);
-  const telemetry = useSampledStore(controller.ui);
   const pedestrian = useStore(controller.pedestrian);
   const model = useStore(controller.model);
-  const mask = useStore(controller.mask);
   const camera = useStore(controller.cameraStatus);
   const pipeline=useStore(controller.pipeline);
-  const cameraDetail=useStore(controller.cameraDetail);
   const journey = useStore(controller.journey.state);
   const [attempt, setAttempt] = useState(0);
-  const [detailsOpen, setDetailsOpen] = useState(false);
+  const indicator = useRef(new PedestrianIndicatorTracker());
+  const [description, setDescription] = useState('');
   const [, tick] = useState(0);
   const lastTap = useRef(0);
   const onCameraTap = () => {
@@ -49,14 +46,15 @@ export function MainScreen({ height, topInset = 0, bottomInset = 0, hidden = fal
     } else lastTap.current = now;
   };
   useEffect(() => { const timer = setInterval(() => tick(v => v + 1), 1_000); return () => clearInterval(timer); }, []);
-  const developer = PRESENTER_TOOLS && settings.interfaceMode === InterfaceMode.DEVELOPER;
+  const developer = settings.interfaceMode === InterfaceMode.DEVELOPER;
   const assistOn = ui.snapshot.mode !== AssistMode.IDLE;
   const fresh = camera === 'running' && controller.hasRecentFrame;
   const routeOnly = journey.phase === 'walking' && !journey.crossing;
   const signal = ui.snapshot.signal;
   const hazard = fresh ? ui.snapshot.hazards[0] : null;
+  const signalIndicator = indicator.current.update(pedestrian, nowMs(), fresh);
   const pedestrianFresh = fresh && nowMs() - pedestrian.timestampMs <= PEDESTRIAN_MAX_AGE_MS;
-  let status = !assistOn ? 'Camera assistance is off.' : routeOnly ? 'Watching nearby traffic.' : 'No pedestrian signal verified.';
+  let status = !assistOn ? '' : routeOnly ? 'Watching nearby traffic.' : 'No pedestrian signal verified.';
   if (assistOn && !routeOnly && fresh && signal.phase !== SignalPhase.UNKNOWN) {
     status = !signal.trusted ? 'Signal colour is unverified.' : {
       [SignalPhase.UNKNOWN]: 'No pedestrian signal verified.',
@@ -69,7 +67,7 @@ export function MainScreen({ height, topInset = 0, bottomInset = 0, hidden = fal
   if (assistOn && !routeOnly) status = pedestrianStatus(pedestrian, nowMs(), ui.snapshot.mode === AssistMode.CROSSING);
   if (hazard && assistOn) status = S.hazardBanner(hazard.side === Side.LEFT ? S.sideLeft : hazard.side === Side.RIGHT ? S.sideRight : S.sideAhead);
   let unavailable: string | null = null;
-  if (!hasPermission) unavailable = 'Camera permission is off. Route guidance remains available.';
+  if (!hasPermission) unavailable = 'Camera permission needed.';
   else if (model.kind !== 'ready') unavailable = model.kind === 'loading' ? 'Loading detection…' : 'Detection unavailable. Open Help to check camera permissions and try again.';
   else if (camera !== 'running' || !fresh) unavailable = perceptionMessage(camera,fresh,pipeline,nowMs());
   else if (assistOn && ui.frameBrightness < 0.04) unavailable = 'Camera blocked or too dark. Check the lens.';
@@ -78,50 +76,50 @@ export function MainScreen({ height, topInset = 0, bottomInset = 0, hidden = fal
   const posture = fresh && assistOn && pitch !== null ? pitch < -35 ? 'Raise phone. Point the camera ahead.' : pitch > 50 ? 'Lower phone. Point the camera ahead.' : null : null;
   const message = unavailable ?? (hazard && assistOn ? status : posture ?? status);
   const icon = unavailable ? 'videocam-off' : hazard && assistOn ? 'warning' : posture ? 'screen-rotation' : assistOn ? 'visibility' : 'pause-circle-outline';
+  const describe = () => {
+    const side = (x: number) => x < 0.38 ? 'left' : x > 0.62 ? 'right' : 'centre';
+    const observations = pedestrianFresh ? pedestrian.observations.map(o => `${pedestrianLabel(o)}, ${side(o.box.centerX)} of the camera image.`) : [];
+    const objects = fresh ? ui.snapshot.tracks.map(t => `${t.category.toLowerCase().replaceAll('_', ' ')}, ${side(t.box.centerX)} of the camera image.`) : [];
+    setDescription(`Camera snapshot at ${new Date().toLocaleTimeString()}. ${message} ${fresh ? [...observations, ...objects].join(' ') || 'No supported objects identified in this snapshot.' : 'No current image observations are available.'} Image position is not a distance or a clear-path assessment.`);
+  };
 
   return <View style={[styles.panel, height === undefined ? StyleSheet.absoluteFill : { height }]}
     pointerEvents="box-none" accessibilityElementsHidden={hidden} importantForAccessibility={hidden ? 'no-hide-descendants' : 'auto'}>
     <View style={StyleSheet.absoluteFill} accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
       {hasPermission && <CameraSurface key={attempt} showPreview={settings.showPreview} active={!hidden} resizeMode="cover" style={StyleSheet.absoluteFill} />}
-      {developer && fresh && settings.showPreview && model.kind === 'ready' && model.info.format === 'SEGMENTATION' &&
-        <SegmentationOverlay mask={mask} frameAspect={ui.frameAspect} resizeMode="cover" />}
       {pedestrianFresh && settings.showPreview && <PedestrianOverlay scene={pedestrian} frameAspect={ui.frameAspect} />}
       {developer && fresh && settings.showPreview && settings.showOverlay &&
-        <DetectionOverlay snapshot={ui.snapshot} frameAspect={ui.frameAspect} resizeMode="cover" visibility={settings} />}
+        <DetectionOverlay carsOnly snapshot={ui.snapshot} frameAspect={ui.frameAspect} resizeMode="cover" visibility={settings} />}
     </View>
     <Pressable accessible={false} pointerEvents="box-only" style={StyleSheet.absoluteFill} onPress={onCameraTap} />
-    {developer && <View style={[styles.strip, { top: topInset + 8 }]}>
-      <Pressable accessibilityRole="button" accessibilityLabel={message + '. Show details'}
-        onPress={() => setDetailsOpen(v => !v)} style={styles.iconButton}>
-        <MaterialIcons name={icon} size={24} color={unavailable || posture || hazard ? '#FFD87A' : '#80DEEA'} />
-      </Pressable>
-      <VehicleVisibilityControls compact />
-      <Pressable accessibilityRole="button" accessibilityLabel={detailsOpen ? 'Close diagnostics' : 'Open diagnostics'}
-        accessibilityState={{ expanded: detailsOpen }} onPress={() => setDetailsOpen(v => !v)} style={styles.iconButton}>
-        <MaterialIcons name={detailsOpen ? 'close' : 'tune'} size={24} color="#FFFFFF" />
-      </Pressable>
-    </View>}
-    {(!developer || detailsOpen) && <ScrollView style={[styles.status, { top: topInset + (developer ? 60 : 8), maxHeight: Math.max(80, Math.min(window.height * (developer ? 0.38 : 0.28), window.height - topInset - bottomInset - 160)) }]}
-      contentContainerStyle={{ padding: 12, gap: 8 }}>
-      <View accessible accessibilityLabel={message} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-        <MaterialIcons name={icon} size={28} color={unavailable || posture || hazard ? '#FFD87A' : '#80DEEA'} />
-        <Text style={[type.titleMedium, { flex: 1 }, (unavailable || posture) && { color: '#FFD87A' }]}>{message}</Text>
-      </View>
+    <div className="cw-camera-toolbar" style={{top:topInset+8}}>
+      <button className="cw-camera-icon-button" aria-label="Describe camera view" aria-expanded={!!description} onClick={describe}>
+        <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></svg>
+      </button>
+      {developer && <CameraIndicators tracks={ui.snapshot.tracks} fresh={fresh} signal={signalIndicator}/>}
+    </div>
+    {(message || description || !settings.showPreview || pedestrian.error) && <ScrollView testID="camera-notification" style={[styles.status, { top: topInset + 60, maxHeight: Math.max(80, Math.min(120, window.height - topInset - bottomInset - 160)) }]}
+      contentContainerStyle={{ padding: 8, gap: 6 }}>
+      {!!message && <View accessible accessibilityLabel={message} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <MaterialIcons name={icon} size={18} color={unavailable || posture || hazard ? '#FFD87A' : '#80DEEA'} />
+        <Text aria-live="polite" aria-atomic={true} style={[type.labelMedium, { flex: 1 }, (unavailable || posture) && { color: '#FFD87A' }]}>{message}</Text>
+      </View>}
       {ui.snapshot.mode === AssistMode.CROSSING && !['walking', 'paused'].includes(journey.phase) &&
         <Text style={type.bodyMedium}>{S.crossingFinishHint}</Text>}
-      {assistOn && <Text style={type.labelMedium}>Experimental pedestrian detection · observations do not authorise crossing.</Text>}
       {!settings.showPreview && <Text style={type.bodyMedium}>Preview hidden.</Text>}
       {!hasPermission && <TextButton label={canRequestPermission ? 'Allow camera' : 'Open app settings'}
         onPress={() => { if (canRequestPermission) void requestPermission(); else void Linking.openSettings(); }} />}
       {hasPermission && camera === 'unavailable' &&
         <TextButton label="Retry camera" onPress={() => setAttempt(a => a + 1)} />}
       {pedestrian.error && camera === 'running' && <TextButton label="Retry pedestrian detection" onPress={() => controller.retryPedestrianDetection()} />}
+      {!!description && <>
+        <button className="cw-camera-dismiss" aria-label="Dismiss camera description" onClick={()=>setDescription('')}>×</button>
+        <Text aria-live="polite" aria-atomic={true} style={type.labelMedium}>{description}</Text>
+      </>}
       {!developer && journey.phase === 'walking' && journey.route && <Text style={type.bodyMedium}>
         {journey.crossing ? 'Crossing assistance' : journey.route.steps[journey.stepIndex]?.instruction}
       </Text>}
-      {developer && <Text style={type.labelMedium}>Camera: {camera}{cameraDetail?` · ${cameraDetail}`:''}. Frame latency: {Math.round(pipeline.latencyMs)} ms · Processing: {Math.round(pipeline.processingMs ?? 0)} ms · Motion: {Math.round(pipeline.motionWorkerMs ?? 0)} ms{pipeline.error?` · ${pipeline.error}`:''}</Text>}
-      {developer && <DeveloperTelemetry snapshot={telemetry.snapshot} fresh={fresh} fps={telemetry.fps} inferenceMs={telemetry.inferenceMs}
-        brightness={telemetry.frameBrightness} model={model.kind === 'ready' ? `${model.info.displayName} · ${model.info.backend} · ${model.info.inputWidth}px` : 'Model unavailable'} />}
+
 
     </ScrollView>}
   </View>;
@@ -129,7 +127,5 @@ export function MainScreen({ height, topInset = 0, bottomInset = 0, hidden = fal
 
 const styles = StyleSheet.create({
   panel: { backgroundColor: '#000' },
-  strip: { position: 'absolute', right: 12, flexDirection: 'row', backgroundColor: Colors.Glass, borderRadius: 24, paddingHorizontal: 4 },
-  iconButton: { minWidth: 44, minHeight: 44, paddingHorizontal: 5, flexDirection: 'row', gap: 3, alignItems: 'center', justifyContent: 'center' },
   status: { position: 'absolute', left: 12, right: 12, backgroundColor: Colors.Glass, borderRadius: 12 },
 });

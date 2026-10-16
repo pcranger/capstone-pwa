@@ -1,5 +1,5 @@
 import { BoxF } from '../core/geometry';
-import type { PedestrianScene } from './pedestrianTypes';
+import { PEDESTRIAN_MAX_IMAGE_EDGE, type PedestrianScene } from './pedestrianTypes';
 
 /** A separate worker keeps the existing vehicle detector independent. One frame in flight. */
 export class PedestrianClient {
@@ -35,7 +35,7 @@ export class PedestrianClient {
   }
   capture(video: HTMLVideoElement, timestampMs: number) {
     if (!this.active || !this.ready || this.busy || timestampMs - this.sentAt < 700 || !video.videoWidth || !video.videoHeight) return;
-    const scale = Math.min(1, 960 / Math.max(video.videoWidth, video.videoHeight));
+    const scale = Math.min(1, PEDESTRIAN_MAX_IMAGE_EDGE / Math.max(video.videoWidth, video.videoHeight));
     const width = Math.round(video.videoWidth * scale), height = Math.round(video.videoHeight * scale);
     if (this.canvas.width !== width || this.canvas.height !== height) { this.canvas.width = width; this.canvas.height = height; }
     this.context.drawImage(video, 0, 0, width, height);

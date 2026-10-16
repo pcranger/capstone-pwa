@@ -19,6 +19,7 @@ try{
  page.on('pageerror',error=>errors.push(error.message));
  await page.goto('http://127.0.0.1:8082');
  await page.getByRole('button',{name:'Agree and continue',exact:true}).click();
+ const setup=page.getByRole('button',{name:'Continue to CrossWise',exact:true});if(await setup.count())await setup.click();
  await page.getByRole('button',{name:'Help',exact:true}).click();
  await page.getByText('Check a reference image',{exact:true}).click();
  const outputs=[];

@@ -27,6 +27,12 @@ export function usableFix(fix: LocationFix, now: number): boolean {
     fix.accuracy <= 25 && Number.isFinite(fix.timestamp) && now - fix.timestamp <= 15_000 && fix.timestamp <= now + 1_000;
 }
 
+/** An estimate is useful for map display/search, but does not qualify for walking guidance. */
+export function displayableFix(fix: LocationFix, now: number): boolean {
+  return validPoint(fix) && fix.accuracy !== null && Number.isFinite(fix.accuracy) && fix.accuracy >= 0 &&
+    Number.isFinite(fix.timestamp) && now - fix.timestamp <= 60_000 && fix.timestamp <= now + 1_000;
+}
+
 async function post(url: string, body: unknown | undefined, apiKey: string, fieldMask: string, signal?: AbortSignal): Promise<any> {
   if (!apiKey.trim()) throw new Error('Walking routes are not configured in this build. Camera assistance is still available.');
   const request = new AbortController();
@@ -57,17 +63,17 @@ async function post(url: string, body: unknown | undefined, apiKey: string, fiel
 }
 
 export async function searchPlaces(query: string, from: GeoPoint | null, key: string, signal?: AbortSignal): Promise<PlaceCandidate[]> {
-  const center = from ? { latitude: from.latitude, longitude: from.longitude } : null;
+  const center = from && validPoint(from) ? { latitude: from.latitude, longitude: from.longitude } : null;
   const data = await post('https://places.googleapis.com/v1/places:searchText', {
     textQuery: query.trim(), pageSize: 5, languageCode: 'en',
-    ...(center ? { locationBias: { circle: { center, radius: 5_000 } } } : {}),
+    ...(center ? { rankPreference: 'DISTANCE', locationBias: { circle: { center, radius: 5_000 } } } : {}),
   }, key, 'places.id,places.displayName,places.location,places.formattedAddress', signal);
   const places: PlaceCandidate[] = (Array.isArray(data?.places) ? data.places : []).flatMap((p: any) =>
     p && typeof p.id === 'string' && p.id && typeof p.displayName?.text === 'string' && p.displayName.text.trim() && p.location && validPoint(p.location)
       ? [{ id: p.id, name: p.displayName.text, address: typeof p.formattedAddress === 'string' ? p.formattedAddress : '', point: p.location }]
       : []);
   if (!places.length) throw new Error('No matching places found. Try a name with a suburb or street.');
-  return places;
+  return center ? places.sort((a,b)=>distanceMeters(center,a.point)-distanceMeters(center,b.point)) : places;
 }
 
 /** Fresh details by ID. No durable provider-content cache and no automatic moved-place substitution. */
@@ -130,14 +136,18 @@ export function parseWalkingRoute(data: any, to: PlaceCandidate): WalkingRoute {
   if (!route) throw new Error('No walking route found for that destination.');
   const points = decodePolyline(route.polyline?.encodedPolyline);
   const steps: RouteStep[] = [];
+  let missingInstructions = false;
   for (const leg of Array.isArray(route.legs) ? route.legs : []) for (const step of Array.isArray(leg?.steps) ? leg.steps : []) {
     const geometry = decodePolyline(step.polyline?.encodedPolyline);
     const instruction = step.navigationInstruction?.instructions;
     // Reject incomplete geometry rather than joining unrelated points with a fabricated walkable line.
-    if (geometry.length < 2 || typeof instruction !== 'string' || !instruction.trim()) {
+    if (geometry.length < 2) {
       throw new Error('This route has incomplete walking instructions. Try another destination.');
     }
-    steps.push({ instruction: instruction.trim(), points: geometry,
+    const hasInstruction = typeof instruction === 'string' && !!instruction.trim();
+    if (!hasInstruction) missingInstructions = true;
+    const sectionDistance = Number.isFinite(step.distanceMeters) ? Math.max(0, step.distanceMeters) : pathLength(geometry);
+    steps.push({ instruction: hasInstruction ? instruction.trim() : `No written turn instruction supplied for this ${Math.round(sectionDistance)} metre section. Review the mapped path before proceeding.`, points: geometry,
       distanceMeters: Number.isFinite(step.distanceMeters) ? Math.max(0, step.distanceMeters) : pathLength(geometry),
       maneuver: step.navigationInstruction?.maneuver ?? 'MANEUVER_UNSPECIFIED' });
   }
@@ -147,7 +157,7 @@ export function parseWalkingRoute(data: any, to: PlaceCandidate): WalkingRoute {
   const duration = typeof route.duration === 'string' && /^\d+(?:\.\d+)?s$/.test(route.duration) ? Number.parseFloat(route.duration) : NaN;
   if (!Number.isFinite(duration) || duration < 0) throw new Error('Google returned an invalid route duration.');
   return { destination: to.name, destinationAddress: to.address, points, steps, distanceMeters: route.distanceMeters,
-    durationSeconds: duration, warnings: Array.isArray(route.warnings) ? route.warnings.filter((w: unknown) => typeof w === 'string') : [] };
+    durationSeconds: duration, warnings: [...(Array.isArray(route.warnings) ? route.warnings.filter((w: unknown) => typeof w === 'string') : []), ...(missingInstructions ? ['Some mapped sections have no written turn instructions from Google. Review these sections before starting; complete spoken directions are unavailable.'] : [])] };
 }
 
 /** Bounded decoder: malformed/truncated provider responses must not loop or invent coordinates. */

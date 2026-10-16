@@ -104,7 +104,10 @@ export function verifyPedestrianSymbol(image: PixelImage, box: BoxF, phase: 'GRE
   if (torso < 2 || evidence.headRatio > .8 || centre < .18 || centre > .82) return { ...evidence, reason: 'head-not-distinct' };
   const minimumGap = Math.max(1, Math.floor(width * .1));
   const minimumLeg = Math.max(1, Math.ceil(width * .07));
-  for (let y = Math.floor(height * .65); y < Math.ceil(height * .94); y++) {
+  let separatedFeet = false;
+  // Include the feet: on small standing symbols the separation may only be
+  // recoverable in the bottom rows. Trimming them discards genuine evidence.
+  for (let y = Math.floor(height * .65); y < height; y++) {
     const row = rows[y];
     let split = false;
     // A genuine gap between two legs must have lit evidence on both sides.
@@ -116,12 +119,16 @@ export function verifyPedestrianSymbol(image: PixelImage, box: BoxF, phase: 'GRE
       if (end - x >= minimumGap && end <= width * .8 && row.slice(0, x).reduce((a, v) => a + v, 0) >= minimumLeg && row.slice(end).reduce((a, v) => a + v, 0) >= minimumLeg) { split = true; break; }
       x = end;
     }
-    if (split) evidence.splitRows++;
+    if (split) { evidence.splitRows++; if(y>=height*.9)separatedFeet=true; }
   }
   if (evidence.splitRows >= Math.max(2, Math.floor(height * .08))) return { ...evidence, accepted: true, reason: 'pedestrian-silhouette' };
+  // Small red standing symbols have adjacent legs; preserve a real foot gap
+  // even when video sampling leaves only one row. Green still needs two rows.
+  if(phase==='RED'&&height<=30&&separatedFeet)return {...evidence,accepted:true,reason:'pedestrian-silhouette'};
   // Tiny red standing figures lose their leg gap through blur. Retain only a
   // tall, centred head/torso profile; never use this exception for a green claim.
-  if (phase === 'RED' && height <= 15 && width <= 8 && height / width >= 1.7) return { ...evidence, accepted: true, reason: 'coarse-red-silhouette' };
+  const referenceScale = Math.max(1, Math.max(image.width,image.height)/960);
+  if (phase === 'RED' && height <= 15*referenceScale && width <= 8*referenceScale && height / width >= 1.7) return { ...evidence, accepted: true, reason: 'coarse-red-silhouette' };
   return { ...evidence, reason: 'legs-not-distinct' };
 }
 

@@ -1,6 +1,16 @@
 # Experimental pedestrian detection and countdowns
 
-Implemented 13 October 2026 on top of the focused demo. The original COCO-SSD vehicle detector and weights remain unchanged. A separate worker adds local pedestrian signal boxes, countdown boxes, and possible crossing-button/press-surface boxes. One pedestrian frame is in flight at a time, sampled no faster than every 700 ms, with a maximum 960-pixel image edge. Results carry capture timestamps; live boxes expire after 1.2 seconds. Closing or backgrounding the camera terminates its worker and clears the results.
+Implemented 13 October 2026 on top of the focused demo, updated 15 October. The original COCO-SSD vehicle detector and weights remain unchanged. A separate worker adds local pedestrian signal boxes, countdown boxes, and possible crossing-button/press-surface boxes. One pedestrian frame is in flight at a time, sampled no faster than every 700 ms, with a maximum 1920-pixel image edge. The neural input remains 640×640; the extra pixels preserve detail for the symbol verifier. Results carry capture timestamps; live boxes expire after 5 seconds. Closing or backgrounding the camera terminates its worker and clears the results immediately.
+
+## 16 October: delayed results and small red symbols
+
+The user-reported screen image produced a red model candidate around 0.78, but the old 960-edge verifier saw a 9×18 lit symbol with no accepted leg gap. Whole-screenshot replay includes browser/application chrome, so this is not an exact reconstruction of the original phone camera frame. Increasing the observation lifetime alone cannot recover a rejected candidate.
+
+The verifier now retains up to 1920-edge source pixels and examines the bottom foot rows instead of discarding the last six percent of the silhouette. In the supplied still screenshot, this reveals two separated-foot rows in the 13×24 symbol. Video sampling can reduce this to one row, so a red figure up to 30 pixels tall can retain a genuine separated-foot row in its bottom ten percent, after passing the head/torso checks. Green still requires multiple separated rows. The existing tiny-red exception scales against its original 960-edge reference size; its head/torso requirements and red-only restriction remain. No weights or class-confidence threshold changed. Replay also finds a possible button in the screenshot's browser chrome, demonstrating that this whole-screen input is not a clean road-scene benchmark.
+
+The requested 5-second window tolerates slower inference but may retain an old observation longer. It does not establish the present signal state or enable crossing permission. Actual iPhone camera/thermal performance remains unverified.
+
+Verification for this update: production build/typecheck, lint and 41 focused unit tests passed. Browser checks passed 38 cases: 24 street/vehicle-light cases, 12 reference-image cases, and two live screenshot replays with an additional 1500 ms result delay. Both live replays showed red and cleared the indicator on camera interruption. WebKit's synthetic live replay is skipped because this runner does not support canvas captureStream; its still-image checks run normally. These fixtures are development regressions, not an independent accuracy benchmark.
 
 ## Crossing behaviour
 
