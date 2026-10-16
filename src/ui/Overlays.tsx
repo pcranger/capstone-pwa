@@ -31,8 +31,8 @@ function colorOf(category: ObjectCategory): string {
 }
 
 /** Draws tracked objects over the center-cropped preview (same crop as the preview's "cover"). */
-export function DetectionOverlay({ snapshot, frameAspect, resizeMode = 'cover', visibility }: {
-  snapshot: EngineSnapshot; frameAspect: number; resizeMode?: 'cover' | 'contain'; visibility?:VehicleVisibility;
+export function DetectionOverlay({ snapshot, frameAspect, resizeMode = 'cover', visibility, carsOnly = false }: {
+  snapshot: EngineSnapshot; frameAspect: number; resizeMode?: 'cover' | 'contain'; visibility?:VehicleVisibility; carsOnly?:boolean;
 }) {
   const type = useType();
   const [size, onLayout] = useLayout();
@@ -40,7 +40,7 @@ export function DetectionOverlay({ snapshot, frameAspect, resizeMode = 'cover', 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none" onLayout={onLayout} accessibilityElementsHidden>
       {rect &&
-        snapshot.tracks.filter(t => visibleVehicle(t,visibility)).map((t) => (
+        snapshot.tracks.filter(t => (!carsOnly || t.category === ObjectCategory.CAR) && visibleVehicle(t,visibility)).map((t) => (
           <View
             key={t.id}
             style={{

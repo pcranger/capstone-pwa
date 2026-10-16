@@ -1,4 +1,7 @@
 import { Store } from "./store";
+import { PedestrianClient } from '../perception/pedestrianClient';
+import { EMPTY_PEDESTRIAN_SCENE, type PedestrianScene } from '../perception/pedestrianTypes';
+import { crossingDecision, pedestrianStatus, PEDESTRIAN_MAX_AGE_MS } from '../perception/pedestrianPolicy';
 import { nowMs } from "../core/geometry";
 import { BrowserSessionLogger } from "../platform/logger";
 import {
@@ -11,7 +14,7 @@ import {
 } from "../crossing/crossingEngine";
 import { type Cue, Verbosity } from "../feedback/cue";
 import { cueText, PHRASES, P } from "../strings";
-import { DEFAULT_SETTINGS, type AppSettings } from "../settings/settings";
+import { DEFAULT_SETTINGS, validateAppSettings, type AppSettings } from "../settings/settings";
 import {
   Feedback,
   browserOrientation,
@@ -29,6 +32,7 @@ import {
   walkingRoute,
   type PlaceCandidate,
   type LocationFix,
+  type WalkingRoute,
   usableFix,
 } from "../nav/navigation";
 import { services } from "../config/services";
@@ -42,6 +46,8 @@ import { BrowserSpeechInput } from "../platform/speech";
 import type { ModelSource } from "../perception/modelLoader";
 import type { OrientationSample } from "../sensors/orientationMath";
 import type { BrowserDetector } from "../perception/browserDetector";
+import { AnnouncementScheduler,ObjectAnnouncementFilter,engineAnnouncements } from '../product/announcementScheduler';
+import { productPreferences } from '../product/preferences';
 
 export interface UiState {
   snapshot: EngineSnapshot;
@@ -68,15 +74,7 @@ export type ModelState =
 function savedSettings(): AppSettings {
   try {
     const raw = JSON.parse(localStorage.getItem("crosswise_settings") ?? "{}");
-    const result = { ...DEFAULT_SETTINGS };
-    if (!raw || typeof raw !== "object") return result;
-    for (const k of Object.keys(result) as (keyof AppSettings)[]) {
-      if (typeof raw[k] === typeof result[k])
-        (result as unknown as Record<string, unknown>)[k] = raw[k];
-    }
-    if (!["USER", "DEVELOPER"].includes(result.interfaceMode))
-      result.interfaceMode = DEFAULT_SETTINGS.interfaceMode;
-    return result;
+    return validateAppSettings(raw);
   } catch {
     return { ...DEFAULT_SETTINGS };
   }
@@ -139,6 +137,44 @@ class Controller {
   cameraPermission = new Store(false);
   pipeline = new Store(EMPTY_PIPELINE);
 
+  pedestrian = new Store<PedestrianScene>(EMPTY_PEDESTRIAN_SCENE);
+  private pedestrianClient: PedestrianClient | null = null;
+  private pedestrianSpeechKey = '';
+  private pedestrianSpeechAt = -Infinity;
+  get crossingDecision() { return crossingDecision(this.pedestrian.value, nowMs()); }
+  private receivePedestrian(scene: PedestrianScene) {
+    if (nowMs() - scene.timestampMs > PEDESTRIAN_MAX_AGE_MS && !scene.error) return;
+    this.pedestrian.set(scene);
+    if (this.engine.mode === AssistMode.IDLE || this.productBrowsing || !this.home || document.hidden) return;
+    const decision = crossingDecision(scene, nowMs());
+    const button = scene.observations.find(o => o.kind === 'button');
+    const text = this.engine.mode === AssistMode.CROSSING
+      ? decision.seconds !== null ? `Countdown reads ${decision.seconds} seconds. Continue using your crossing skills; confirm when you reach the far footpath.` : scene.observations.some(o => o.phase === 'RED') ? 'Red signal observed. If already crossing, continue using your crossing skills to reach the footpath.' : ''
+      : button && !scene.observations.some(o => o.kind === 'signal' || o.kind === 'countdown')
+        ? `Possible crossing button, ${button.box.centerX < .4 ? 'left in the camera view' : button.box.centerX > .6 ? 'right in the camera view' : 'centred in the camera view'}.` : decision.message;
+    const key = text.replace(/\d+/g, '#');
+    if (text && (key !== this.pedestrianSpeechKey || nowMs() - this.pedestrianSpeechAt > 12000)) {
+      this.pedestrianSpeechKey = key; this.pedestrianSpeechAt = nowMs();
+      this.announcements.cancelBelow(90);
+      this.announcements.cancelPrefix('pedestrian:');
+      void this.announcements.enqueue({text,priority:90,key:`pedestrian:${key}`,expiresAt:Date.now()+Math.max(0,PEDESTRIAN_MAX_AGE_MS-(nowMs()-scene.timestampMs))});
+    }
+  }
+  retryPedestrianDetection() {
+    if (!this.stream || !this.video || document.hidden) return;
+    const generation = this.generation;
+    this.pedestrianClient?.dispose(); this.pedestrianClient = null;
+    this.pedestrian.set(EMPTY_PEDESTRIAN_SCENE);
+    try { this.pedestrianClient = new PedestrianClient(scene => { if (generation === this.generation) this.receivePedestrian(scene); }); }
+    catch { this.pedestrian.set({ ...EMPTY_PEDESTRIAN_SCENE, error: 'Pedestrian detection unavailable.' }); }
+  }
+  /** Reporting an existing crossing is not permission to begin one. */
+  reportAlreadyCrossing() {
+    this.feedback.unlock();
+    if (this.engine.mode === AssistMode.IDLE) this.output(this.engine.command(UserCommand.START_ASSIST, nowMs()));
+    this.output(this.engine.command(UserCommand.START_CROSSING, nowMs()));
+    if (this.journey.hasJourney) this.journey.enterCrossing();
+  }
   private checking = false;
   private checkState = new Store({ text: "" });
   voiceCheck = {
@@ -163,14 +199,18 @@ class Controller {
     verbosity: Verbosity.NORMAL,
   });
   private feedback = new Feedback(this.settings.value);
+  private announcements = new AnnouncementScheduler(text=>this.feedback.sayAndWait(text),()=>this.feedback.cancel());
+  private objectAnnouncements = new ObjectAnnouncementFilter();
+  private productBrowsing = true;
+  private pendingInitialGuidance: { route: WalkingRoute; stepIndex: number; expiresAt: number } | null = null;
   private speechInput = new BrowserSpeechInput();
   voice = new NavigationVoice({
     input: this.speechInput,
-    say: (t) => {this.lastVoicePrompt=t;return this.feedback.sayAndWait(t);},
+    say: (t) => {this.lastVoicePrompt=t;return this.announcements.enqueue({text:t,priority:80,key:`voice:${t}`,expiresAt:Date.now()+30_000});},
     ready: () => this.feedback.vibrate(),
     handle: (t, current) => this.handleVoice(t, current),
-    cancel: () => this.feedback.cancel(),
-    stopSpeech: () => this.feedback.cancel(),
+    cancel: () => this.announcements.cancel(),
+    stopSpeech: () => this.announcements.cancel(),
     announceListening: () => this.feedback.sayAndWait("Listening."),
   });
   private voiceNavigate = false;
@@ -181,6 +221,7 @@ class Controller {
   private stream: MediaStream | null = null;
   private generation = 0;
   private pendingCamera: Promise<void> | null = null;
+  private cameraResumeRequested = false;
   private detector: BrowserDetector | null = null;
   private modelPromise: Promise<BrowserDetector> | null = null;
   private lastFrame = 0;
@@ -209,7 +250,7 @@ class Controller {
       return { remove: () => navigator.geolocation.clearWatch(id) };
     },
     say: (t) => this.sayNavigation(t),
-    silence: () => this.feedback.cancel(),
+    silence: () => { this.pendingInitialGuidance = null; this.announcements.cancel(); },
   });
   planner = new DestinationPlanner({
     search: (query, signal) =>
@@ -219,7 +260,7 @@ class Controller {
         services.mapsRestApiKey,
         signal,
       ),
-    details: (id, signal) => placeDetails(id, services.mapsRestApiKey, signal),
+    details: async (id, signal) => this.savedPlaces.getCandidate(id) ?? await placeDetails(id, services.mapsRestApiKey, signal),
     route: async (place, signal) => {
       if (!services.mapsRestApiKey)
         throw new Error(
@@ -242,11 +283,11 @@ class Controller {
     },
     cancelStart: () => this.journey.pause(),
     progress: async (t) => this.sayNavigation(t),
-    silenceProgress: () => this.feedback.cancel(),
+    silenceProgress: () => this.announcements.cancel(),
   });
   logger = new BrowserSessionLogger();
   constructor() {
-    this.updateSettings((s) => s);
+    this.updateSettings((s) => s,false);
     void this.savedPlaces.load();
     setInterval(() => {
       const now = nowMs();
@@ -276,9 +317,9 @@ class Controller {
       if (document.hidden) {
         this.stopVoice();
         if (this.journey.hasJourney) this.journey.pause();
-        this.releaseCamera();
-        this.feedback.cancel();
-      } else if (this.cameraPermission.value) void this.requestCamera();
+        this.suspendCamera();
+        this.announcements.cancel();
+      } else if (this.cameraResumeRequested) void this.requestCamera();
     });
     window.addEventListener(
       "crosswise-permissions",
@@ -290,9 +331,10 @@ class Controller {
       this.cameraStatus.value === "running" && nowMs() - this.lastFrame < 2500
     );
   }
-  updateSettings(transform: (s: AppSettings) => AppSettings) {
+  updateSettings(transform: (s: AppSettings) => AppSettings,persist=true) {
     const previous = this.settings.value;
     const next = transform(previous);
+    if(persist)localStorage.setItem('crosswise_settings',JSON.stringify(next));
     this.settings.set(next);
     this.feedback.settings = next;
     this.engine.settings = {
@@ -300,47 +342,54 @@ class Controller {
       aimSonar: next.aimSonar,
       veerGuidance: next.veerGuidance,
       vehicleAlerts: next.vehicleAlerts,
-      autoDetectCrossing:
-        next.interfaceMode === "DEVELOPER" &&
-        !this.journey.hasJourney &&
-        next.autoDetectCrossing,
+      autoDetectCrossing: false,
       verbosity: next.verbosity,
     };
-    try {
-      localStorage.setItem("crosswise_settings", JSON.stringify(next));
-    } catch {
-      /* Unavailable storage. */
-    }
     if (previous.useGpu !== next.useGpu) {
       const old = this.modelPromise;
       this.modelPromise = null;
-      this.releaseCamera();
+      const resume = this.cameraResumeRequested;
+      this.suspendCamera();
       void old?.then((model) => model.dispose()).catch(() => {});
-      if (this.cameraPermission.value) void this.requestCamera();
+      if (resume && !document.hidden) void this.requestCamera();
     }
   }
+  reloadSettings() { this.updateSettings(() => savedSettings(),false); }
   setHomeVisible(visible: boolean) {
     this.home = visible;
-    if (!visible) this.stopVoice();
+    if (!visible) {this.stopVoice();this.announcements.cancel();}
+  }
+  setProductBrowsing(browsing: boolean) {
+    this.productBrowsing=browsing;
+    if(browsing)this.announcements.cancel();
+    else {
+      const pending = this.pendingInitialGuidance; this.pendingInitialGuidance = null;
+      const state = this.journey.state.value;
+      if (pending && pending.expiresAt > Date.now() && this.journey.running && !state.crossing &&
+          this.engine.mode !== AssistMode.CROSSING && state.route === pending.route && state.stepIndex === pending.stepIndex)
+        this.sayNavigation(this.journey.guidanceText());
+    }
+  }
+  /** Preserve the first route instruction until the shell finishes its menu-to-walk handoff. */
+  queueInitialGuidance(): void {
+    const state = this.journey.state.value;
+    if (!this.journey.running || state.crossing || !state.route || this.home && !this.productBrowsing) return;
+    this.pendingInitialGuidance = { route: state.route, stepIndex: state.stepIndex, expiresAt: Date.now() + 15000 };
   }
   clearNotice() {
     this.notice.set(null);
   }
-  private output(out: EngineOutput) {
+  private output(out: EngineOutput, minimumSpeechPriority = 0) {
     this.logger.record(out.snapshot, this.settings.value.logSessions);
     this.ui.update((s) => ({ ...s, snapshot: out.snapshot }));
-    if (!this.home || document.hidden) return;
+    if ((!this.home && minimumSpeechPriority < 80) || document.hidden) return;
     const cues=this.journey.running&&!this.journey.state.value.crossing?out.cues.filter(walkingCue):out.cues;
-    const spoken = cues.filter(
-      (c) => c.kind === "speak" || c.kind === "speakText",
-    );
-    if (spoken.length)
-      this.sayNavigation(
-        spoken
-          .map((c) => cueText(c))
-          .filter(Boolean)
-          .join(" "),
-      );
+    let captionUpdated = false;
+    for (const announcement of engineAnnouncements(cues, Date.now(), minimumSpeechPriority)) {
+      if (this.productBrowsing && announcement.priority < 80) continue;
+      if (!captionUpdated) { this.ui.update(s => ({ ...s, caption: announcement.text })); captionUpdated = true; }
+      void this.announcements.enqueue(announcement);
+    }
     for (const c of cues) {
       if (c.kind === "tone") this.feedback.playTone(c.tone, c.pan);
       if (c.kind === "haptic") this.feedback.vibrate(c.pattern);
@@ -348,6 +397,17 @@ class Controller {
   }
   command(command: UserCommand, _explicit = false) {
     this.feedback.unlock();
+    if ((command === UserCommand.START_CROSSING || command === UserCommand.TOGGLE_CROSSING && this.engine.mode !== AssistMode.CROSSING) && this.crossingDecision.blocked) {
+      this.notice.set(this.crossingDecision.message);
+      this.sayNavigation(this.crossingDecision.message, 90);
+      return;
+    }
+    if (command === UserCommand.REPEAT_STATUS && this.engine.mode !== AssistMode.IDLE) {
+      const out = this.engine.command(command, nowMs());
+      out.cues = out.cues.filter(c => c.kind !== 'speak' || !['SIGNAL_UNAVAILABLE', 'STATUS_NO_SIGNAL'].includes(c.phrase));
+      out.cues.unshift({kind:'speakText',text:pedestrianStatus(this.pedestrian.value,nowMs(),this.engine.mode===AssistMode.CROSSING),priority:2});
+      this.output(out, _explicit ? 80 : 0); return;
+    }
     if (
       command === UserCommand.START_ASSIST &&
       (this.model.value.kind !== "ready" || !this.hasRecentFrame)
@@ -355,7 +415,7 @@ class Controller {
       this.notice.set("Detection unavailable.");
       return;
     }
-    this.output(this.engine.command(command, nowMs()));
+    this.output(this.engine.command(command, nowMs()), command === UserCommand.REPEAT_STATUS && _explicit ? 80 : 0);
   }
   crossingAction(action: "start" | "help" | "finish") {
     if (action === "finish") {
@@ -366,14 +426,14 @@ class Controller {
       this.command(UserCommand.START_ASSIST);
     } else {
       this.command(UserCommand.START_CROSSING);
-      if (this.journey.hasJourney) this.journey.enterCrossing();
+      if (this.engine.mode === AssistMode.CROSSING && this.journey.hasJourney) this.journey.enterCrossing();
     }
   }
   repeatGuidance() {
     this.feedback.unlock();
     if (this.journey.running && !this.journey.state.value.crossing)
-      this.journey.repeat();
-    else this.command(UserCommand.REPEAT_STATUS);
+      this.sayNavigation(this.journey.guidanceText(),80);
+    else this.command(UserCommand.REPEAT_STATUS,true);
   }
   pauseJourney() {
     this.journey.pause();
@@ -386,7 +446,9 @@ class Controller {
       );
       return false;
     }
-    const started=await this.journey.start();if(started&&this.hasRecentFrame)this.command(UserCommand.START_ASSIST);return started;
+    const started=await this.journey.start();
+    if(started){if(this.hasRecentFrame)this.command(UserCommand.START_ASSIST);this.queueInitialGuidance();}
+    return started;
   }
   finishJourney(step: number) {
     this.journey.arrive(step);
@@ -428,17 +490,20 @@ class Controller {
   }
   async startPlannedJourney(confirmed = false) {
     const started=await this.planner.start(this.planner.state.value.revision,confirmed);
-    if(started)this.presentation.set({mapOpen:false,expanded:false});
+    if(started){this.presentation.set({mapOpen:false,expanded:false});this.queueInitialGuidance();}
     return started;
   }
-  sayNavigation(text: string) {
-    if (!text) return;
+  sayNavigation(text: string,priority=70) {
+    if (!text || (this.productBrowsing && priority<80)) return;
     this.ui.update((s) => ({ ...s, caption: text }));
-    this.feedback.speak(text);
+    void this.announcements.enqueue({text,priority,key:`${priority}:${text}`,expiresAt:Date.now()+(priority>=80?15_000:priority>=70?5_000:2_000)});
   }
   async savePlace(place: PlaceCandidate, alias?: string) {
     try {
-      await this.savedPlaces.save(place.id, place.name, alias);
+      if(place.endpoint==='coordinate'||place.id.startsWith('local:')) {
+        const existing=this.savedPlaces.state.value.items.find(p=>p.placeId===place.id);
+        await this.savedPlaces.saveCoordinate(place.point,alias??existing?.alias??place.name,existing?.role??'destination',place.id);
+      } else await this.savedPlaces.save(place.id, place.name, alias);
       this.savedDetails.update((s) => ({ ...s, [place.id]: place }));
       return "Place saved.";
     } catch (e) {
@@ -467,7 +532,7 @@ class Controller {
     await Promise.all(
       ids.map(async (id) => {
         try {
-          const place = await placeDetails(id, services.mapsRestApiKey, signal);
+          const place = this.savedPlaces.getCandidate(id) ?? await placeDetails(id, services.mapsRestApiKey, signal);
           if (!signal.aborted)
             this.savedDetails.update((s) => ({ ...s, [id]: place }));
         } catch {
@@ -479,15 +544,15 @@ class Controller {
   async practice(cues: Cue[]) {
     this.feedback.unlock();
     for (const c of cues) {
-      if (c.kind === "speak") this.sayNavigation(PHRASES[c.phrase]);
-      else if (c.kind === "speakText") this.sayNavigation(c.text);
+      if (c.kind === "speak") this.sayNavigation(PHRASES[c.phrase],80);
+      else if (c.kind === "speakText") this.sayNavigation(c.text,80);
       else if (c.kind === "tone") this.feedback.playTone(c.tone, c.pan);
       else this.feedback.vibrate(c.pattern);
     }
   }
   stopSpeechPreview() {
     ++this.speechGeneration;
-    this.feedback.cancel();
+    this.announcements.cancelBelow(100);
   }
   async previewSpeech(cues: Cue[]) {
     const generation = ++this.speechGeneration;
@@ -509,14 +574,20 @@ class Controller {
     );
   }
   async requestCamera() {
+    this.cameraResumeRequested = true;
     if (this.pendingCamera) return this.pendingCamera;
-    this.pendingCamera = this.startCamera().finally(() => {
-      this.pendingCamera = null;
+    const pending = this.startCamera().finally(() => {
+      if (this.pendingCamera === pending) this.pendingCamera = null;
     });
-    return this.pendingCamera;
+    this.pendingCamera = pending;
+    return pending;
+  }
+  /** Read-only access for local recording/photo tools; the controller remains the camera owner. */
+  getCameraStream(): MediaStream | null {
+    return this.stream?.getVideoTracks().some(track => track.readyState === 'live') ? this.stream : null;
   }
   private async startCamera() {
-    this.releaseCamera();
+    this.releaseCameraStream();
     const generation = this.generation;
     this.cameraStatus.set("starting");
     this.cameraDetail.set(null);
@@ -555,7 +626,19 @@ class Controller {
     }
   }
   releaseCamera() {
+    this.cameraResumeRequested = false;
+    this.suspendCamera();
+  }
+  /** Backgrounding interrupts tracks without forgetting a deliberately active camera session. */
+  private suspendCamera() {
+    this.pendingCamera = null;
+    this.releaseCameraStream();
+  }
+  private releaseCameraStream() {
     ++this.generation;
+    this.pedestrianClient?.dispose(); this.pedestrianClient = null;
+    this.announcements.cancelPrefix('pedestrian:');
+    this.pedestrian.set(EMPTY_PEDESTRIAN_SCENE); this.pedestrianSpeechKey = '';
     this.stream?.getTracks().forEach((t) => t.stop());
     this.stream = null;
     if (this.video) this.video.srcObject = null;
@@ -608,6 +691,7 @@ class Controller {
           hasPedestrianSignalClasses: false,
         },
       });
+      this.retryPedestrianDetection();
       const capture = document.createElement("canvas"),
         grayCanvas = document.createElement("canvas");
       grayCanvas.width = 160;
@@ -643,6 +727,7 @@ class Controller {
           }
           const stamp = nowMs(),
             t = performance.now();
+          this.pedestrianClient?.capture(video, stamp);
           const predictions = await this.detector!.detect(
             capture,
             20,
@@ -688,6 +773,10 @@ class Controller {
                 { hfovDeg: 60, vfovDeg: 45 },
               ),
             );
+            if(!this.productBrowsing&&!this.voice.active&&this.engine.mode!==AssistMode.CROSSING&&!this.journey.state.value.crossing){
+              const label=this.objectAnnouncements.choose(predictions,capture.width,productPreferences.value,Date.now());
+              if(label)this.sayNavigation(`${label.charAt(0).toUpperCase()+label.slice(1)}.`,40);
+            }
           }
         } catch {
           if (generation !== this.generation) return;
@@ -829,7 +918,7 @@ class Controller {
         const query = intent.query.toLocaleLowerCase("en-AU").trim();
         const saved = this.savedPlaces.state.value.items.filter(
           (p) =>
-            (p.alias ?? p.queryLabel ?? "")
+            (query==='home'&&p.role==='home')||(p.alias ?? p.queryLabel ?? "")
               .toLocaleLowerCase("en-AU")
               .trim() === query,
         );

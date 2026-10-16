@@ -1,5 +1,22 @@
 import type { SpeechInput } from "../voice/nativeSpeech";
 import { speechStatus } from "../voice/speechStatus";
+import { Store } from "../state/store";
+
+const ENGLISH = "en-US";
+const PACK_OPTIONS = { langs: [ENGLISH], processLocally: true };
+type Availability = "available" | "downloadable" | "downloading" | "unavailable";
+type PackPhase = "idle" | "checking" | "downloading" | "needs-gesture" | "ready" | "unavailable" | "error";
+export interface EnglishSpeechPackState {
+  phase: PackPhase;
+  availability: Availability | null;
+  message: string;
+}
+export const englishSpeechPack = new Store<EnglishSpeechPackState>({
+  phase: "idle",
+  availability: null,
+  message: "Checking offline English recognition…",
+});
+
 interface Recognition {
   lang: string;
   continuous: boolean;
@@ -23,38 +40,136 @@ type Constructor = {
   available?: (o: {
     langs: string[];
     processLocally: boolean;
-  }) => Promise<string>;
+  }) => Promise<Availability>;
+  install?: (o: {
+    langs: string[];
+    processLocally: boolean;
+  }) => Promise<boolean>;
 };
+
+const unavailableMessage = "Offline English recognition is unavailable in this browser.";
+let ongoing: Promise<boolean> | null = null;
+let operation = 0;
+
+function recognitionConstructor(): Constructor | undefined {
+  return (window as unknown as { SpeechRecognition?: Constructor }).SpeechRecognition;
+}
+
+function updatePack(phase: PackPhase, message: string, availability: Availability | null = englishSpeechPack.value.availability) {
+  englishSpeechPack.set({ phase, availability, message });
+  if (phase === "ready") speechStatus.set({ locale: ENGLISH, error: null });
+  else if (phase === "needs-gesture" || phase === "unavailable" || phase === "error")
+    speechStatus.set({ locale: null, error: message });
+}
+
+function track(task: Promise<boolean>): Promise<boolean> {
+  ongoing = task;
+  void task.finally(() => { if (ongoing === task) ongoing = null; });
+  return task;
+}
+
+function installPack(ctor: Constructor, id: number, fromTap: boolean): Promise<boolean> {
+  if (!ctor.install) {
+    updatePack("unavailable", unavailableMessage);
+    return Promise.resolve(false);
+  }
+  updatePack("downloading", "Downloading offline English recognition…");
+  let installation: Promise<boolean>;
+  try {
+    // This invocation must happen synchronously in retryEnglishSpeechPack's tap handler.
+    installation = ctor.install(PACK_OPTIONS);
+  } catch (error) {
+    if (id === operation) installError(error, fromTap);
+    return Promise.resolve(false);
+  }
+  return installation.then(installed => {
+    if (id !== operation) return englishSpeechPack.value.phase === "ready";
+    if (installed) {
+      updatePack("ready", "Offline English recognition is ready.", "available");
+      return true;
+    }
+    updatePack(fromTap ? "error" : "needs-gesture", fromTap
+      ? "Could not install offline English recognition. Check your connection and browser settings, then retry."
+      : "The browser could not start the download automatically. Tap Retry download to try again.");
+    return false;
+  }).catch(error => {
+    if (id === operation) installError(error, fromTap);
+    return false;
+  });
+}
+
+function installError(error: unknown, fromTap: boolean) {
+  const name = error instanceof Error ? error.name : "";
+  if (!fromTap && (name === "NotAllowedError" || name === "SecurityError" || name === "InvalidStateError")) {
+    updatePack("needs-gesture", "Tap Retry download to ask the browser to install offline English recognition.");
+  } else {
+    updatePack("error", "Could not install offline English recognition. Check your connection and browser settings, then retry.");
+  }
+}
+
+/** Check for the browser-managed pack when the app opens, and install it if offered. */
+export function prepareEnglishSpeechPack(): Promise<boolean> {
+  if (englishSpeechPack.value.phase === "ready") return Promise.resolve(true);
+  if (ongoing) return ongoing;
+  if (["needs-gesture", "unavailable", "error"].includes(englishSpeechPack.value.phase))
+    return Promise.resolve(false);
+  const ctor = recognitionConstructor();
+  if (!ctor?.available) {
+    updatePack("unavailable", unavailableMessage, "unavailable");
+    return Promise.resolve(false);
+  }
+  const id = ++operation;
+  updatePack("checking", "Checking offline English recognition…", null);
+  const task = Promise.resolve().then(() => ctor.available!(PACK_OPTIONS)).then(availability => {
+    if (id !== operation) return englishSpeechPack.value.phase === "ready";
+    if (availability === "available") {
+      updatePack("ready", "Offline English recognition is ready.", availability);
+      return true;
+    }
+    if (availability === "unavailable") {
+      updatePack("unavailable", unavailableMessage, availability);
+      return false;
+    }
+    if (availability === "downloadable" || availability === "downloading") {
+      englishSpeechPack.update(previous => ({ ...previous, availability }));
+      return installPack(ctor, id, false);
+    }
+    updatePack("error", "Could not check offline English recognition. Retry the download.");
+    return false;
+  }).catch(() => {
+    if (id === operation) updatePack("error", "Could not check offline English recognition. Retry the download.");
+    return false;
+  });
+  return track(task);
+}
+
+/** Call directly from a button tap so the browser can accept the install gesture. */
+export function retryEnglishSpeechPack(): Promise<boolean> {
+  if (englishSpeechPack.value.phase === "ready") return Promise.resolve(true);
+  if (ongoing && englishSpeechPack.value.phase === "downloading") return ongoing;
+  const ctor = recognitionConstructor();
+  if (!ctor?.install) {
+    updatePack("unavailable", unavailableMessage, "unavailable");
+    return Promise.resolve(false);
+  }
+  const id = ++operation;
+  return track(installPack(ctor, id, true));
+}
+
 export class BrowserSpeechInput implements SpeechInput {
   private ctor: Constructor | null = null;
   private stop: (() => void) | null = null;
   async prepare() {
-    const ctor = (window as unknown as { SpeechRecognition?: Constructor })
-      .SpeechRecognition;
-    try {
-      if (
-        !ctor?.available ||
-        (await ctor.available({ langs: ["en-US"], processLocally: true })) !==
-          "available"
-      )
-        throw new Error(
-          "Offline English recognition is unavailable in this browser.",
-        );
-      this.ctor = ctor;
-      speechStatus.set({ locale: "en-US", error: null });
-    } catch (e) {
-      speechStatus.set({
-        locale: null,
-        error: e instanceof Error ? e.message : "Voice unavailable.",
-      });
-      throw e;
-    }
+    const ready = await prepareEnglishSpeechPack();
+    const ctor = recognitionConstructor();
+    if (!ready || !ctor) throw new Error(englishSpeechPack.value.message || unavailableMessage);
+    this.ctor = ctor;
   }
   listen(ready: () => void): Promise<string> {
     this.cancel();
     if (!this.ctor) return Promise.reject(new Error("Voice unavailable."));
     const r = new this.ctor();
-    r.lang = "en-US";
+    r.lang = ENGLISH;
     r.processLocally = true;
     r.continuous = false;
     r.interimResults = false;

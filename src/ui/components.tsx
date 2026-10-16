@@ -188,7 +188,7 @@ export function TogglePill({ label, value, onChange }: { label: string; value: b
   );
 }
 
-/** Keeps the dragged value locally and persists it once, when the gesture (or VoiceOver adjustment) ends. */
+/** Accepts pointer, keyboard, and assistive-technology value changes. */
 export function SliderRow({
   label,
   value,

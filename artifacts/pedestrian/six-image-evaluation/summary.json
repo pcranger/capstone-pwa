@@ -1,0 +1,324 @@
+[
+  {
+    "id": "01-road",
+    "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\Road_2022-09-12_09-42-57.webp",
+    "input_sha256": "6952f5836cdc17ee8b59be03eeb95290fc1f045f5824ffe3b9622beb39dcc1d6",
+    "image_size": [
+      1920,
+      2560
+    ],
+    "model_sha256": "96437c2080a0ba5364f438b41c8551e310e9761cf998c74856d42b748d357b42",
+    "input_tensor": [
+      1,
+      3,
+      640,
+      640
+    ],
+    "confidence_threshold": 0.35,
+    "detections": [
+      {
+        "class": "R_Signal",
+        "confidence": 0.8020438551902771,
+        "box_xyxy": [
+          1384.870361328125,
+          1168.4449462890625,
+          1447.037109375,
+          1274.4595947265625
+        ],
+        "box_normalized": [
+          0.7212866465250651,
+          0.45642380714416503,
+          0.7536651611328125,
+          0.4978357791900635
+        ],
+        "source": "pretrained ONNX model only"
+      }
+    ],
+    "timing": {
+      "native_CPU_single_thread_median_ms": 184.5640999963507,
+      "samples_ms": [
+        209.37580009922385,
+        190.61059993691742,
+        176.73279996961355,
+        184.5640999963507,
+        179.91000006441027
+      ],
+      "note": "Desktop native ONNX inference only; excludes preprocessing and is not browser/mobile performance."
+    },
+    "limitations": "No shape fallback, countdown reader or button heuristics in this raw-model evaluation. One image does not establish Australian road accuracy."
+  },
+  {
+    "id": "02-frome",
+    "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\Frome-Street-1200x800-2024-05-02T134052.webp",
+    "input_sha256": "0d2ffb60b089bcf495a9f55509f374bf6cd179f0beaca8bf900be90e14ab22f3",
+    "image_size": [
+      1200,
+      800
+    ],
+    "model_sha256": "96437c2080a0ba5364f438b41c8551e310e9761cf998c74856d42b748d357b42",
+    "input_tensor": [
+      1,
+      3,
+      640,
+      640
+    ],
+    "confidence_threshold": 0.35,
+    "detections": [
+      {
+        "class": "G_Signal",
+        "confidence": 0.8485252857208252,
+        "box_xyxy": [
+          717.2489624023438,
+          341.6878356933594,
+          792.302734375,
+          490.8917541503906
+        ],
+        "box_normalized": [
+          0.5977074686686198,
+          0.42710979461669923,
+          0.6602522786458334,
+          0.6136146926879883
+        ],
+        "source": "pretrained ONNX model only"
+      }
+    ],
+    "timing": {
+      "native_CPU_single_thread_median_ms": 164.47380010504276,
+      "samples_ms": [
+        162.3787999851629,
+        164.47380010504276,
+        182.9276999924332,
+        166.43069998826832,
+        159.14780006278306
+      ],
+      "note": "Desktop native ONNX inference only; excludes preprocessing and is not browser/mobile performance."
+    },
+    "limitations": "No shape fallback, countdown reader or button heuristics in this raw-model evaluation. One image does not establish Australian road accuracy."
+  },
+  {
+    "id": "03-pultney",
+    "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\Pultney-Street-pedestrian-crossing-1200x800-2024-05-02T134019.webp",
+    "input_sha256": "a24829b8ba00f976e5886e8137bcbbebfc7c0f596a07e26a0cc10a84d1cb56a3",
+    "image_size": [
+      1530,
+      1020
+    ],
+    "model_sha256": "96437c2080a0ba5364f438b41c8551e310e9761cf998c74856d42b748d357b42",
+    "input_tensor": [
+      1,
+      3,
+      640,
+      640
+    ],
+    "confidence_threshold": 0.35,
+    "detections": [
+      {
+        "class": "R_Signal",
+        "confidence": 0.8106368184089661,
+        "box_xyxy": [
+          816.3638916015625,
+          444.7714538574219,
+          920.1298217773438,
+          684.9083251953125
+        ],
+        "box_normalized": [
+          0.5335711709814134,
+          0.43605044495825673,
+          0.6013920403773488,
+          0.6714787501914828
+        ],
+        "source": "pretrained ONNX model only"
+      }
+    ],
+    "timing": {
+      "native_CPU_single_thread_median_ms": 196.47579989396036,
+      "samples_ms": [
+        207.08089997060597,
+        196.47579989396036,
+        217.1729999827221,
+        175.80680001992732,
+        179.36830001417547
+      ],
+      "note": "Desktop native ONNX inference only; excludes preprocessing and is not browser/mobile performance."
+    },
+    "limitations": "No shape fallback, countdown reader or button heuristics in this raw-model evaluation. One image does not establish Australian road accuracy."
+  },
+  {
+    "id": "04-209b",
+    "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\209b.jpg",
+    "input_sha256": "b8a59bf1299bdb0f4c13d43ffb4c3bc590b365dea6978bead2e8c2f10bec9929",
+    "image_size": [
+      394,
+      591
+    ],
+    "model_sha256": "96437c2080a0ba5364f438b41c8551e310e9761cf998c74856d42b748d357b42",
+    "input_tensor": [
+      1,
+      3,
+      640,
+      640
+    ],
+    "confidence_threshold": 0.35,
+    "detections": [
+      {
+        "class": "R_Signal",
+        "confidence": 0.8256781697273254,
+        "box_xyxy": [
+          111.3904800415039,
+          350.9234313964844,
+          124.88994598388672,
+          376.1479797363281
+        ],
+        "box_normalized": [
+          0.2827169544200607,
+          0.5937790717368602,
+          0.31697955833473784,
+          0.63646020259954
+        ],
+        "source": "pretrained ONNX model only"
+      },
+      {
+        "class": "G_Signal",
+        "confidence": 0.7451931238174438,
+        "box_xyxy": [
+          160.32821655273438,
+          297.017578125,
+          181.47634887695312,
+          340.89093017578125
+        ],
+        "box_normalized": [
+          0.4069244074942497,
+          0.5025678140862944,
+          0.4605998702460739,
+          0.5768036043583439
+        ],
+        "source": "pretrained ONNX model only"
+      },
+      {
+        "class": "G_Signal",
+        "confidence": 0.43623408675193787,
+        "box_xyxy": [
+          212.63502502441406,
+          203.70225524902344,
+          255.60752868652344,
+          295.24725341796875
+        ],
+        "box_normalized": [
+          0.5396828046304926,
+          0.34467386674961664,
+          0.6487500728084351,
+          0.4995723408087458
+        ],
+        "source": "pretrained ONNX model only"
+      }
+    ],
+    "timing": {
+      "native_CPU_single_thread_median_ms": 228.13249996397644,
+      "samples_ms": [
+        263.89810000546277,
+        229.02020008768886,
+        228.13249996397644,
+        214.96360003948212,
+        176.46580003201962
+      ],
+      "note": "Desktop native ONNX inference only; excludes preprocessing and is not browser/mobile performance."
+    },
+    "limitations": "No shape fallback, countdown reader or button heuristics in this raw-model evaluation. One image does not establish Australian road accuracy."
+  },
+  {
+    "id": "05-upgrade",
+    "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\traffic-signal-ugrade.jpg",
+    "input_sha256": "dd8599234d8d6265865f9b177d6e42ee443e88255b65cf80fba59d67557f3769",
+    "image_size": [
+      480,
+      706
+    ],
+    "model_sha256": "96437c2080a0ba5364f438b41c8551e310e9761cf998c74856d42b748d357b42",
+    "input_tensor": [
+      1,
+      3,
+      640,
+      640
+    ],
+    "confidence_threshold": 0.35,
+    "detections": [
+      {
+        "class": "G_Signal",
+        "confidence": 0.5287725925445557,
+        "box_xyxy": [
+          198.38375854492188,
+          177.43328857421875,
+          244.79931640625,
+          264.7395935058594
+        ],
+        "box_normalized": [
+          0.41329949696858725,
+          0.2513219384903948,
+          0.5099985758463542,
+          0.37498525992331355
+        ],
+        "source": "pretrained ONNX model only"
+      }
+    ],
+    "timing": {
+      "native_CPU_single_thread_median_ms": 189.14520007092506,
+      "samples_ms": [
+        189.14520007092506,
+        197.37190008163452,
+        192.68139998894185,
+        172.66420007217675,
+        175.51640002056956
+      ],
+      "note": "Desktop native ONNX inference only; excludes preprocessing and is not browser/mobile performance."
+    },
+    "limitations": "No shape fallback, countdown reader or button heuristics in this raw-model evaluation. One image does not establish Australian road accuracy."
+  },
+  {
+    "id": "06-narellan",
+    "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\a-traffic-light-with-a-stop-sign-and-pedestrian-crossing-sign-in-narellan-new-south-wales-2HBWNP2.jpg",
+    "input_sha256": "8ee2d7de97ea1503b27874883e42bd3245ed1ddef92a61188ede3018fc556729",
+    "image_size": [
+      866,
+      1390
+    ],
+    "model_sha256": "96437c2080a0ba5364f438b41c8551e310e9761cf998c74856d42b748d357b42",
+    "input_tensor": [
+      1,
+      3,
+      640,
+      640
+    ],
+    "confidence_threshold": 0.35,
+    "detections": [
+      {
+        "class": "G_Signal",
+        "confidence": 0.7894155979156494,
+        "box_xyxy": [
+          319.3783874511719,
+          274.1531982421875,
+          404.9637145996094,
+          463.881103515625
+        ],
+        "box_normalized": [
+          0.36879721414684974,
+          0.1972325167209982,
+          0.46762553648915633,
+          0.33372741260116906
+        ],
+        "source": "pretrained ONNX model only"
+      }
+    ],
+    "timing": {
+      "native_CPU_single_thread_median_ms": 182.77569999918342,
+      "samples_ms": [
+        172.36319999210536,
+        169.79559999890625,
+        182.77569999918342,
+        206.13830001093447,
+        185.35180005710572
+      ],
+      "note": "Desktop native ONNX inference only; excludes preprocessing and is not browser/mobile performance."
+    },
+    "limitations": "No shape fallback, countdown reader or button heuristics in this raw-model evaluation. One image does not establish Australian road accuracy."
+  }
+]

@@ -44,6 +44,7 @@ interface Props {
     details: { isGesture: boolean },
   ) => void;
   accessibilityElementsHidden?: boolean;
+  accessibilityLabel?: string;
   importantForAccessibility?: string;
 }
 export default class MapView extends React.Component<
@@ -59,13 +60,18 @@ export default class MapView extends React.Component<
         if (!this.alive || !this.div.current) return;
         const map = new google.maps.Map(this.div.current, {
           center: point(this.props.initialRegion),
-          zoom: 2,
+          zoom: 17,
           disableDefaultUI: true,
+          zoomControl: true,
           gestureHandling: "greedy",
           clickableIcons: true,
+          keyboardShortcuts: true,
         });
-        this.setState({ map });
-        this.props.onMapReady();
+        const reportZoom = () => { if(this.div.current)this.div.current.dataset.mapZoom=String(map.getZoom?.()??17); };
+        reportZoom();map.addListener('zoom_changed',reportZoom);
+        this.setState({ map }, () => {
+          if (this.alive) this.props.onMapReady();
+        });
         google.maps.event.addListenerOnce(
           map,
           "tilesloaded",
@@ -115,6 +121,9 @@ export default class MapView extends React.Component<
         <div
           ref={this.div}
           aria-hidden={this.props.accessibilityElementsHidden}
+          inert={this.props.accessibilityElementsHidden}
+          role="region"
+          aria-label={this.props.accessibilityLabel ?? 'Interactive map'}
           style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: this.props.mapPadding?.bottom ?? 0 }}
         />
         <MapContext.Provider value={this.state.map}>
@@ -130,22 +139,28 @@ export function Marker({
   description,
   onPress,
   pinColor,
+  draggable,
+  onDragEnd,
 }: {
   coordinate: GeoPoint;
   title?: string;
   description?: string;
   onPress?: () => void;
   pinColor?: string;
+  draggable?: boolean;
+  onDragEnd?: (point: GeoPoint) => void;
 }) {
   const map = useContext(MapContext),
     callback = useRef(onPress);
   callback.current = onPress;
+  const dragCallback = useRef(onDragEnd); dragCallback.current = onDragEnd;
   useEffect(() => {
     if (!map) return;
     const marker = new google.maps.Marker({
       map,
       position: point(coordinate),
       title,
+      draggable: draggable === true,
       icon: pinColor
         ? {
             path: google.maps.SymbolPath.CIRCLE,
@@ -158,6 +173,7 @@ export function Marker({
         : undefined,
     });
     marker.addListener("click", () => callback.current?.());
+    marker.addListener("dragend", (event: google.maps.MapMouseEvent) => { if (event.latLng) dragCallback.current?.({ latitude: event.latLng.lat(), longitude: event.latLng.lng() }); });
     return () => {
       marker.setMap(null);
     };
@@ -168,6 +184,7 @@ export function Marker({
     title,
     description,
     pinColor,
+    draggable,
   ]);
   return null;
 }

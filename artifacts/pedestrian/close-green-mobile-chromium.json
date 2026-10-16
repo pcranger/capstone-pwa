@@ -1,0 +1,25 @@
+{
+  "fixture": "close-green",
+  "browser": "mobile-chromium",
+  "boxes": 2,
+  "coordinates": [
+    {
+      "kind": "pedestrian-box-signal",
+      "label": "Green pedestrian · shape estimate",
+      "x": 153,
+      "y": 180,
+      "width": 49,
+      "height": 81
+    },
+    {
+      "kind": "pedestrian-box-label",
+      "label": "Green pedestrian · shape estimate",
+      "x": -39,
+      "y": -25,
+      "width": 260,
+      "height": 21
+    }
+  ],
+  "text": "Check a reference image\n\nExperimental image check. Choose a local image; it stays on this device. This is a still-image result, not live crossing guidance.\n\nPedestrian reference image\n\nImage check complete.\n\nGreen pedestrian · shape estimate\n\nGreen pedestrian symbol observed. Crossing safety and remaining time are unverified.\n\nGreen pedestrian · shape estimate · unverified shape estimate",
+  "errors": []
+}

@@ -1,0 +1,29 @@
+{
+  "input": "C:\\Users\\HP\\AppData\\Local\\Temp\\codex-clipboard-704084c8-5975-440b-8488-bd280cc65cbb.png",
+  "input_sha256": "6d65afb629a022d2881eaea4ec3e4d58f51cf26ec16cc65f5fb9f463c84e32e0",
+  "image_size": [
+    300,
+    564
+  ],
+  "model_sha256": "96437c2080a0ba5364f438b41c8551e310e9761cf998c74856d42b748d357b42",
+  "input_tensor": [
+    1,
+    3,
+    640,
+    640
+  ],
+  "confidence_threshold": 0.35,
+  "detections": [],
+  "timing": {
+    "native_CPU_single_thread_median_ms": 198.32560000941157,
+    "samples_ms": [
+      197.85570004023612,
+      191.62499997764826,
+      198.32560000941157,
+      199.2200999520719,
+      205.34500002395362
+    ],
+    "note": "Desktop native ONNX inference only; excludes preprocessing and is not browser/mobile performance."
+  },
+  "limitations": "No shape fallback, countdown reader or button heuristics in this raw-model evaluation. One image does not establish Australian road accuracy."
+}

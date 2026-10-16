@@ -1,0 +1,19 @@
+{
+  "base": "http://127.0.0.1:8081",
+  "results": [
+    {
+      "fixture": "street-green",
+      "observations": "Green pedestrian"
+    },
+    {
+      "fixture": "countdown",
+      "observations": "Red pedestrian · shape estimate\nGreen pedestrian · shape estimate\nCountdown · 21s · do not start"
+    },
+    {
+      "fixture": "button",
+      "observations": "Possible crossing button\nPossible press surface"
+    }
+  ],
+  "offline": true,
+  "errors": []
+}

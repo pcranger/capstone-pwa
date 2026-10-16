@@ -1,0 +1,50 @@
+[
+  {
+    "id": "01-road",
+    "file": "01-road.webp",
+    "sha256": "6952f5836cdc17ee8b59be03eeb95290fc1f045f5824ffe3b9622beb39dcc1d6",
+    "expected": "RED"
+  },
+  {
+    "id": "02-frome",
+    "file": "02-frome.webp",
+    "sha256": "0d2ffb60b089bcf495a9f55509f374bf6cd179f0beaca8bf900be90e14ab22f3",
+    "expected": "GREEN"
+  },
+  {
+    "id": "03-pultney",
+    "file": "03-pultney.webp",
+    "sha256": "a24829b8ba00f976e5886e8137bcbbebfc7c0f596a07e26a0cc10a84d1cb56a3",
+    "expected": "RED"
+  },
+  {
+    "id": "04-209b",
+    "file": "04-209b.jpg",
+    "sha256": "b8a59bf1299bdb0f4c13d43ffb4c3bc590b365dea6978bead2e8c2f10bec9929",
+    "expected": "RED"
+  },
+  {
+    "id": "05-upgrade",
+    "file": "05-upgrade.jpg",
+    "sha256": "dd8599234d8d6265865f9b177d6e42ee443e88255b65cf80fba59d67557f3769",
+    "expected": "GREEN"
+  },
+  {
+    "id": "06-narellan",
+    "file": "06-narellan.jpg",
+    "sha256": "8ee2d7de97ea1503b27874883e42bd3245ed1ddef92a61188ede3018fc556729",
+    "expected": null
+  },
+  {
+    "id": "07-round-vehicle",
+    "file": "07-round-vehicle.png",
+    "sha256": "6d65afb629a022d2881eaea4ec3e4d58f51cf26ec16cc65f5fb9f463c84e32e0",
+    "expected": null
+  },
+  {
+    "id": "08-arrow-vehicle",
+    "file": "08-arrow-vehicle.png",
+    "sha256": "015ca54a4ee4cfa51e9ee0b238f3554dbe566baca38b2106876cb0f95a760657",
+    "expected": null
+  }
+]

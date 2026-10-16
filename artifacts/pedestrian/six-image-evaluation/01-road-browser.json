@@ -1,0 +1,22 @@
+{
+  "id": "01-road",
+  "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\Road_2022-09-12_09-42-57.webp",
+  "input_sha256": "6952f5836cdc17ee8b59be03eeb95290fc1f045f5824ffe3b9622beb39dcc1d6",
+  "observations": [
+    {
+      "id": "model-24112",
+      "kind": "signal",
+      "box": {
+        "left": 0.7212480545043946,
+        "top": 0.45628407746553423,
+        "right": 0.7536556879679362,
+        "bottom": 0.498115698993206
+      },
+      "phase": "RED",
+      "score": 0.8096665994839043,
+      "source": "pretrained"
+    }
+  ],
+  "policy": "Red pedestrian signal observed. Do not start crossing.",
+  "errors": []
+}

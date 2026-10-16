@@ -1,0 +1,47 @@
+{
+  "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\traffic-signal-ugrade.jpg",
+  "input_sha256": "dd8599234d8d6265865f9b177d6e42ee443e88255b65cf80fba59d67557f3769",
+  "image_size": [
+    480,
+    706
+  ],
+  "model_sha256": "96437c2080a0ba5364f438b41c8551e310e9761cf998c74856d42b748d357b42",
+  "input_tensor": [
+    1,
+    3,
+    640,
+    640
+  ],
+  "confidence_threshold": 0.35,
+  "detections": [
+    {
+      "class": "G_Signal",
+      "confidence": 0.5287725925445557,
+      "box_xyxy": [
+        198.38375854492188,
+        177.43328857421875,
+        244.79931640625,
+        264.7395935058594
+      ],
+      "box_normalized": [
+        0.41329949696858725,
+        0.2513219384903948,
+        0.5099985758463542,
+        0.37498525992331355
+      ],
+      "source": "pretrained ONNX model only"
+    }
+  ],
+  "timing": {
+    "native_CPU_single_thread_median_ms": 189.14520007092506,
+    "samples_ms": [
+      189.14520007092506,
+      197.37190008163452,
+      192.68139998894185,
+      172.66420007217675,
+      175.51640002056956
+    ],
+    "note": "Desktop native ONNX inference only; excludes preprocessing and is not browser/mobile performance."
+  },
+  "limitations": "No shape fallback, countdown reader or button heuristics in this raw-model evaluation. One image does not establish Australian road accuracy."
+}

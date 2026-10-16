@@ -1,0 +1,49 @@
+{
+  "id": "02-frome",
+  "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\Frome-Street-1200x800-2024-05-02T134052.webp",
+  "input_sha256": "0d2ffb60b089bcf495a9f55509f374bf6cd179f0beaca8bf900be90e14ab22f3",
+  "observations": [
+    {
+      "id": "model-160200",
+      "kind": "signal",
+      "box": {
+        "left": 0.598030948638916,
+        "top": 0.4262801534398099,
+        "right": 0.6596258163452149,
+        "bottom": 0.6119430059571456
+      },
+      "phase": "GREEN",
+      "score": 0.8336368279342423,
+      "source": "pretrained"
+    }
+  ],
+  "diagnostics": {
+    "signalCandidates": [
+      {
+        "observation": {
+          "id": "model-160200",
+          "kind": "signal",
+          "box": {
+            "left": 0.598030948638916,
+            "top": 0.4262801534398099,
+            "right": 0.6596258163452149,
+            "bottom": 0.6119430059571456
+          },
+          "phase": "GREEN",
+          "score": 0.8336368279342423,
+          "source": "pretrained"
+        },
+        "evidence": {
+          "accepted": true,
+          "reason": "pedestrian-silhouette",
+          "width": 25,
+          "height": 37,
+          "headRatio": 0.6470588235294118,
+          "splitRows": 9
+        }
+      }
+    ]
+  },
+  "policy": "Green pedestrian symbol observed. Crossing safety and remaining time are unverified.",
+  "errors": []
+}

@@ -1,0 +1,95 @@
+{
+  "id": "04-209b",
+  "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\209b.jpg",
+  "input_sha256": "b8a59bf1299bdb0f4c13d43ffb4c3bc590b365dea6978bead2e8c2f10bec9929",
+  "observations": [
+    {
+      "id": "model-30952",
+      "kind": "signal",
+      "box": {
+        "left": 0.2827052880226868,
+        "top": 0.5937713339924813,
+        "right": 0.3169775578679748,
+        "bottom": 0.6364691063761712
+      },
+      "phase": "RED",
+      "score": 0.8252312877426675,
+      "source": "pretrained"
+    }
+  ],
+  "diagnostics": {
+    "signalCandidates": [
+      {
+        "observation": {
+          "id": "model-30952",
+          "kind": "signal",
+          "box": {
+            "left": 0.2827052880226868,
+            "top": 0.5937713339924813,
+            "right": 0.3169775578679748,
+            "bottom": 0.6364691063761712
+          },
+          "phase": "RED",
+          "score": 0.8252312877426675,
+          "source": "pretrained"
+        },
+        "evidence": {
+          "accepted": true,
+          "reason": "coarse-red-silhouette",
+          "width": 4,
+          "height": 9,
+          "headRatio": 0.5,
+          "splitRows": 0
+        }
+      },
+      {
+        "observation": {
+          "id": "model-130208",
+          "kind": "signal",
+          "box": {
+            "left": 0.4069983462259976,
+            "top": 0.5025505363941193,
+            "right": 0.4605805220592776,
+            "bottom": 0.5767985045909881
+          },
+          "phase": "GREEN",
+          "score": 0.7456230021060364,
+          "source": "pretrained"
+        },
+        "evidence": {
+          "accepted": false,
+          "reason": "round-or-wide-lamp",
+          "width": 10,
+          "height": 8,
+          "headRatio": 0,
+          "splitRows": 0
+        }
+      },
+      {
+        "observation": {
+          "id": "model-158896",
+          "kind": "signal",
+          "box": {
+            "left": 0.5398205169749204,
+            "top": 0.3447742760181427,
+            "right": 0.6487025008547781,
+            "bottom": 0.4996133506298065
+          },
+          "phase": "GREEN",
+          "score": 0.43663844545426045,
+          "source": "pretrained"
+        },
+        "evidence": {
+          "accepted": false,
+          "reason": "round-or-wide-lamp",
+          "width": 21,
+          "height": 19,
+          "headRatio": 0,
+          "splitRows": 0
+        }
+      }
+    ]
+  },
+  "policy": "Red pedestrian signal observed. Do not start crossing.",
+  "errors": []
+}

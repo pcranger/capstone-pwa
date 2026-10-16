@@ -79,4 +79,9 @@ export class BrowserSessionLogger {
       };
     });
   }
+  clear() {
+    localStorage.removeItem(key);
+    this.started = 0; this.rows = [];
+    this.urls.forEach(url => URL.revokeObjectURL(url)); this.urls = [];
+  }
 }

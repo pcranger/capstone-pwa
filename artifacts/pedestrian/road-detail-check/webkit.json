@@ -1,0 +1,48 @@
+{
+  "name": "webkit",
+  "status": "No supported pedestrian signal, countdown or button found.",
+  "measurements": [
+    {
+      "elapsedMs": 1074,
+      "message": {
+        "type": "ready"
+      }
+    },
+    {
+      "elapsedMs": 1297,
+      "message": {
+        "type": "result",
+        "timestampMs": 2236,
+        "observations": [],
+        "diagnostics": {
+          "signalCandidates": [
+            {
+              "observation": {
+                "id": "model-24112",
+                "kind": "signal",
+                "box": {
+                  "left": 0.721286658445994,
+                  "top": 0.45642379820346834,
+                  "right": 0.7536651492118835,
+                  "bottom": 0.4978357881307602
+                },
+                "phase": "RED",
+                "score": 0.8020438811508939,
+                "source": "pretrained"
+              },
+              "evidence": {
+                "accepted": false,
+                "reason": "legs-not-distinct",
+                "width": 13,
+                "height": 25,
+                "headRatio": 0.6923076923076923,
+                "splitRows": 0
+              }
+            }
+          ]
+        },
+        "error": null
+      }
+    }
+  ]
+}

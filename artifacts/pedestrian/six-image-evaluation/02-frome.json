@@ -1,0 +1,47 @@
+{
+  "input": "C:\\Users\\HP\\OneDrive\\Desktop\\capstone\\Frome-Street-1200x800-2024-05-02T134052.webp",
+  "input_sha256": "0d2ffb60b089bcf495a9f55509f374bf6cd179f0beaca8bf900be90e14ab22f3",
+  "image_size": [
+    1200,
+    800
+  ],
+  "model_sha256": "96437c2080a0ba5364f438b41c8551e310e9761cf998c74856d42b748d357b42",
+  "input_tensor": [
+    1,
+    3,
+    640,
+    640
+  ],
+  "confidence_threshold": 0.35,
+  "detections": [
+    {
+      "class": "G_Signal",
+      "confidence": 0.8485252857208252,
+      "box_xyxy": [
+        717.2489624023438,
+        341.6878356933594,
+        792.302734375,
+        490.8917541503906
+      ],
+      "box_normalized": [
+        0.5977074686686198,
+        0.42710979461669923,
+        0.6602522786458334,
+        0.6136146926879883
+      ],
+      "source": "pretrained ONNX model only"
+    }
+  ],
+  "timing": {
+    "native_CPU_single_thread_median_ms": 164.47380010504276,
+    "samples_ms": [
+      162.3787999851629,
+      164.47380010504276,
+      182.9276999924332,
+      166.43069998826832,
+      159.14780006278306
+    ],
+    "note": "Desktop native ONNX inference only; excludes preprocessing and is not browser/mobile performance."
+  },
+  "limitations": "No shape fallback, countdown reader or button heuristics in this raw-model evaluation. One image does not establish Australian road accuracy."
+}

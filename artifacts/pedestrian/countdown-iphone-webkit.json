@@ -1,0 +1,57 @@
+{
+  "fixture": "countdown",
+  "browser": "iphone-webkit",
+  "boxes": 6,
+  "coordinates": [
+    {
+      "kind": "pedestrian-box-signal",
+      "label": "Red pedestrian · shape estimate",
+      "x": 291,
+      "y": 50,
+      "width": 21,
+      "height": 46
+    },
+    {
+      "kind": "pedestrian-box-label",
+      "label": "Red pedestrian · shape estimate",
+      "x": -199,
+      "y": -25,
+      "width": 260,
+      "height": 21
+    },
+    {
+      "kind": "pedestrian-box-signal",
+      "label": "Green pedestrian · shape estimate",
+      "x": 43,
+      "y": 125,
+      "width": 31,
+      "height": 46
+    },
+    {
+      "kind": "pedestrian-box-label",
+      "label": "Green pedestrian · shape estimate",
+      "x": 0,
+      "y": -25,
+      "width": 260,
+      "height": 21
+    },
+    {
+      "kind": "pedestrian-box-countdown",
+      "label": "Countdown · 21s · do not start",
+      "x": 161,
+      "y": 57,
+      "width": 39,
+      "height": 32
+    },
+    {
+      "kind": "pedestrian-box-label",
+      "label": "Countdown · 21s · do not start",
+      "x": -69,
+      "y": -25,
+      "width": 260,
+      "height": 21
+    }
+  ],
+  "text": "Check a reference image\n\nExperimental image check. Choose a local image; it stays on this device. This is a still-image result, not live crossing guidance.\n\nPedestrian reference image\n\nImage check complete.\n\nRed pedestrian · shape estimateGreen pedestrian · shape estimateCountdown · 21s · do not start\n\nRed pedestrian signal observed. Do not start crossing.\n\nRed pedestrian · shape estimate · unverified shape estimate\nGreen pedestrian · shape estimate · unverified shape estimate\nCountdown · 21s · do not start · seven-segment estimate",
+  "errors": []
+}

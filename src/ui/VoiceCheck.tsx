@@ -14,6 +14,6 @@ export function VoiceCheck() {
     <Hint>Microphone test: tap, say a short phrase after the vibration, and wait for it to repeat. This does not execute commands. An available offline English recognizer is selected; audio is not saved.</Hint>
     <BigButton color={Colors.Crossing} text={controller.voiceCheck.active ? 'Stop voice check' : 'Test microphone'}
       onPress={() => controller.voiceCheck.active ? controller.voiceCheck.stop() : void controller.voiceCheck.start()} />
-    {s.text ? <Text style={type.bodyMedium}>{s.text}</Text> : null}
+    <Text aria-live="polite" aria-atomic={true} style={type.bodyMedium}>{s.text}</Text>
   </View>;
 }

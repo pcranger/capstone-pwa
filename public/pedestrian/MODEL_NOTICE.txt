@@ -1,0 +1,10 @@
+Experimental CrossWise pedestrian detector
+Source repository and model: GPL-3.0, licence in YOLOv5-LICENSE.txt.
+Pinned source: https://github.com/mixxung/crosswalk-traffic-light-detection-yolov5/tree/013c8390878332322185d8bac68a501e62d818d1
+Original weights: https://github.com/mixxung/crosswalk-traffic-light-detection-yolov5/blob/013c8390878332322185d8bac68a501e62d818d1/runs/train/exp4/weights/best.pt
+Corresponding model architecture and export code are available in that pinned repository.
+Conversion: load the original YOLOv5s6 model in evaluation mode, float32; wrap forward(x) to return model(x)[0]; torch.onnx.export fixed input 1x3x640x640, opset_version=12, dynamo=False, input_names=['images'], output_names=['detections'].
+No new training, fine-tuning or alteration to learned weights was performed.
+The model's Australian accuracy, dataset image rights and road safety are not independently established.
+Do not use an experimental detection as permission to start crossing.
+Runtime: ONNX Runtime Web (MIT); OCR: Tesseract.js/core and English trained data (Apache-2.0). Licence texts are included here in ONNXRUNTIME-LICENSE.txt, TESSERACT-JS-LICENSE.txt and TESSERACT-CORE-LICENSE.txt; original package/source distributions retain their notices.

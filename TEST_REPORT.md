@@ -1,4 +1,18 @@
+> Pedestrian detection update (13 October 2026): local pedestrian signal/countdown boxes and possible button boxes are now available. Open Help → Check a reference image to try the same detector on a local photo. Start crossing is disabled because the public models are not validated for Australian road use. Use Already in the road — get assistance to report an existing crossing. See [pedestrian implementation and limitations](docs/PEDESTRIAN_DETECTION.md).
+
+# Current experiment validation - 13 October 2026
+
+The final complete check passed: TypeScript, ESLint, 234 unit tests across 28 files, 8 server tests, production build, and 103 browser scenarios with 5 intentional synthetic-camera WebKit skips. This includes 24 new real-image regression checks across desktop Chromium, mobile Chromium and iPhone WebKit. The same six street photos retain all five visually identified pedestrian signals while removing three false green vehicle-light detections and the false foliage countdown. Two additional vehicle-light close-ups produce no pedestrian observations. The earlier countdown-21, button, offline, protected crossing commands, camera and recovery checks still pass. The packaged Chromium worker was also evaluated on all eight originals, preserving observations, rejected-candidate diagnostics and screenshots. These supplied images were used during development and are not a held-out accuracy benchmark. Details: [vehicle-exclusion implementation and repeated evaluation](artifacts/pedestrian/vehicle-exclusion-evaluation/REPORT.md). Physical-device and Australian field validation remain outstanding.
+
+This build remains only in the separate experiment branch and folder. It has not been merged into main or published to Fly. Earlier deployed smoke/health results in docs/DEV_DEPLOYMENT.md describe the previous demo build. The original demo checkout remains clean at bb31c60.
+
+The optional presenter build has 77 distinct passing scenarios, 8 intentional media skips and 2 unresolved forced CPU-only inference failures. It is excluded from the deployed demo. Physical-device validation remains outstanding.
+
+## Historical reports
+
 # capstone_PWA verification
+
+Historical report for the 12 October baseline. The 13 October Eye Navi-style implementation, current results and remaining checks are recorded in [implementation status](docs/EYENAVI_IMPLEMENTATION_STATUS.md). The deployment observations below apply to the older main app. The current changes are deployed separately to [dev](docs/DEV_DEPLOYMENT.md).
 
 Verified 12 October 2026 against the rebuilt phone UI and production PWA.
 

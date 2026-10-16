@@ -5,8 +5,10 @@ import {resolve,extname,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const root=resolve(fileURLToPath(new URL('./dist/',import.meta.url)));
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png','.svg':'image/svg+xml','.ttf':'font/ttf','.woff2':'font/woff2','.bin':'application/octet-stream'};
-const masks={search:'places.id,places.displayName,places.location,places.formattedAddress',details:'id,displayName,formattedAddress,location,businessStatus,movedPlaceId',route:'routes.polyline.encodedPolyline,routes.distanceMeters,routes.duration,routes.warnings,routes.legs.steps.navigationInstruction,routes.legs.steps.distanceMeters,routes.legs.steps.polyline.encodedPolyline'};
+const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png','.svg':'image/svg+xml','.ttf':'font/ttf','.woff2':'font/woff2','.bin':'application/octet-stream','.mjs':'text/javascript; charset=utf-8','.wasm':'application/wasm','.onnx':'application/octet-stream','.gz':'application/gzip'};
+const masks={search:'places.id,places.displayName,places.location,places.formattedAddress',details:'id,displayName,formattedAddress,location,businessStatus,movedPlaceId',nearby:'places.id,places.displayName,places.location,places.formattedAddress,places.types',route:'routes.polyline.encodedPolyline,routes.distanceMeters,routes.duration,routes.warnings,routes.legs.steps.navigationInstruction,routes.legs.steps.distanceMeters,routes.legs.steps.polyline.encodedPolyline'};
+const nearbyTypes=new Set(['fast_food_restaurant','family_restaurant','ramen_restaurant','restaurant','cafe','coffee_shop','bakery','convenience_store','supermarket','shopping_mall','store','train_station','bus_station','bus_stop','subway_station','light_rail_station','tram_stop','ferry_terminal','transit_station','parking','gas_station','car_repair','hospital','doctor','pharmacy','dentist','local_government_office','post_office','police','library','bank','atm','park','museum','sports_complex','tourist_attraction','hotel','lodging','public_bathroom','laundry','hair_salon']);
+const nearbyRadii=new Set([30,50,100,150,200,250,300,400,500]);
 const buckets=new Map();
 function reply(res,status,value){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(value));}
 async function bodyOf(req){let text='';for await(const chunk of req){text+=chunk;if(Buffer.byteLength(text)>16384)throw new Error('Body too large');}return JSON.parse(text);}
@@ -31,15 +33,21 @@ export function createApp({mapsKey=process.env.GOOGLE_MAP_API_KEY??'',browserMap
     if(url.pathname==='/api/maps/search'&&req.method==='POST'){
      const incoming=await bodyOf(req);if(typeof incoming.textQuery!=='string'||!incoming.textQuery.trim()||incoming.textQuery.length>240){reply(res,400,{error:'Enter a destination name and suburb.'});return;}
      body={textQuery:incoming.textQuery.trim(),pageSize:5,languageCode:'en'};
-     const circle=incoming.locationBias?.circle;if(point(circle?.center))body.locationBias={circle:{center:circle.center,radius:5000}};
+     const circle=incoming.locationBias?.circle;if(point(circle?.center)){body.locationBias={circle:{center:circle.center,radius:5000}};body.rankPreference='DISTANCE';}
      target='https://places.googleapis.com/v1/places:searchText';mask=masks.search;
+    }else if(url.pathname==='/api/maps/nearby'&&req.method==='POST'){
+     const incoming=await bodyOf(req),circle=incoming.locationRestriction?.circle,types=incoming.includedTypes;
+     if(!point(circle?.center)||!nearbyRadii.has(circle?.radius)||!Array.isArray(types)||!types.length||types.length>50||types.some(type=>typeof type!=='string'||!nearbyTypes.has(type))){reply(res,400,{error:'Invalid nearby search. Choose a radius and supported categories.'});return;}
+     body={locationRestriction:{circle:{center:circle.center,radius:circle.radius}},includedTypes:[...new Set(types)],maxResultCount:20,rankPreference:'DISTANCE',languageCode:'en'};
+     target='https://places.googleapis.com/v1/places:searchNearby';mask=masks.nearby;
     }else if(/^\/api\/maps\/places\/[^/]+$/.test(url.pathname)&&req.method==='GET'){
      const id=decodeURIComponent(url.pathname.slice('/api/maps/places/'.length));if(!id||id.length>512){reply(res,400,{error:'Place unavailable. Search again.'});return;}
      target='https://places.googleapis.com/v1/places/'+encodeURIComponent(id);method='GET';mask=masks.details;
     }else if(url.pathname==='/api/maps/route'&&req.method==='POST'){
-     const incoming=await bodyOf(req),start=incoming.origin?.location?.latLng,id=incoming.destination?.placeId;
-     if(!point(start)||typeof id!=='string'||!id||id.length>512){reply(res,400,{error:'Invalid walking route request.'});return;}
-     body={origin:{location:{latLng:start}},destination:{placeId:id},travelMode:'WALK',polylineEncoding:'ENCODED_POLYLINE',polylineQuality:'HIGH_QUALITY',languageCode:'en-AU',units:'METRIC'};
+     const incoming=await bodyOf(req),start=incoming.origin?.location?.latLng,id=incoming.destination?.placeId,end=incoming.destination?.location?.latLng,via=incoming.intermediates;
+     if(!point(start)||!(typeof id==='string'&&id&&id.length<=512||point(end))||(via!==undefined&&(!Array.isArray(via)||via.length>20||via.some(p=>!point(p?.location?.latLng))))){reply(res,400,{error:'Invalid walking route request.'});return;}
+     body={origin:{location:{latLng:start}},destination:point(end)?{location:{latLng:end}}:{placeId:id},travelMode:'WALK',polylineEncoding:'ENCODED_POLYLINE',polylineQuality:'HIGH_QUALITY',languageCode:'en-AU',units:'METRIC',computeAlternativeRoutes:!via?.length&&incoming.computeAlternativeRoutes===true};
+     if(via?.length)body.intermediates=via.map(p=>({location:{latLng:p.location.latLng}}));
      target='https://routes.googleapis.com/directions/v2:computeRoutes';mask=masks.route;
     }else{reply(res,404,{error:'Unknown endpoint.'});return;}
     const response=await upstream(target,{method,headers:{'Content-Type':'application/json','X-Goog-Api-Key':mapsKey,'X-Goog-FieldMask':mask},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(18000)});

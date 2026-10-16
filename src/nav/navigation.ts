@@ -1,9 +1,10 @@
 import { googleApplicationHeaders,services } from '../config/services';
+import { routePreference, ROUTE_PREFERENCES, supportsPreference, type RoutePreference } from './routePreferences';
 
 /** Google supplies route instructions; it does not establish the pedestrian's pavement or signal phase. */
 export interface GeoPoint { latitude: number; longitude: number }
 export interface LocationFix extends GeoPoint { accuracy: number | null; timestamp: number }
-export interface PlaceCandidate { id: string; name: string; address: string; point: GeoPoint; unavailableReason?: string }
+export interface PlaceCandidate { id: string; name: string; address: string; point: GeoPoint; unavailableReason?: string; endpoint?: 'provider' | 'coordinate' }
 export interface RouteStep { instruction: string; distanceMeters: number; points: GeoPoint[]; maneuver: string }
 export interface WalkingRoute {
   destination: string;
@@ -13,14 +14,23 @@ export interface WalkingRoute {
   distanceMeters: number;
   durationSeconds: number;
   warnings: string[];
+  requestedPreference?: RoutePreference;
+  appliedPreference?: RoutePreference | 'standard';
+  alternatives?: WalkingRoute[];
 }
 
 export const WALKING_WARNING = 'Google walking routes are in beta and may omit sidewalks or pedestrian paths.';
-export const validPoint = (p: GeoPoint): boolean => Number.isFinite(p.latitude) && Number.isFinite(p.longitude) &&
+export const validPoint = (p: GeoPoint): boolean => !!p && Number.isFinite(p.latitude) && Number.isFinite(p.longitude) &&
   Math.abs(p.latitude) <= 90 && Math.abs(p.longitude) <= 180;
 export function usableFix(fix: LocationFix, now: number): boolean {
   return validPoint(fix) && fix.accuracy !== null && Number.isFinite(fix.accuracy) && fix.accuracy >= 0 &&
     fix.accuracy <= 25 && Number.isFinite(fix.timestamp) && now - fix.timestamp <= 15_000 && fix.timestamp <= now + 1_000;
+}
+
+/** An estimate is useful for map display/search, but does not qualify for walking guidance. */
+export function displayableFix(fix: LocationFix, now: number): boolean {
+  return validPoint(fix) && fix.accuracy !== null && Number.isFinite(fix.accuracy) && fix.accuracy >= 0 &&
+    Number.isFinite(fix.timestamp) && now - fix.timestamp <= 60_000 && fix.timestamp <= now + 1_000;
 }
 
 async function post(url: string, body: unknown | undefined, apiKey: string, fieldMask: string, signal?: AbortSignal): Promise<any> {
@@ -32,7 +42,7 @@ async function post(url: string, body: unknown | undefined, apiKey: string, fiel
   const timeout = setTimeout(cancel, 20_000);
   try {
     const proxy=services.mapsProxyEnabled;
-    const endpoint=proxy?(url.includes('places:searchText')?'/api/maps/search':url.includes('computeRoutes')?'/api/maps/route':'/api/maps/places/'+url.split('/places/')[1]):url;
+    const endpoint=proxy?(url.includes('places:searchNearby')?'/api/maps/nearby':url.includes('places:searchText')?'/api/maps/search':url.includes('computeRoutes')?'/api/maps/route':'/api/maps/places/'+url.split('/places/')[1]):url;
     const response = await fetch(endpoint, {
       method: body === undefined ? 'GET' : 'POST', headers: { ...googleApplicationHeaders(), 'Content-Type': 'application/json', ...(proxy?{}:{'X-Goog-Api-Key':apiKey}), 'X-Goog-FieldMask': fieldMask },
       body: body === undefined ? undefined : JSON.stringify(body), signal: request.signal,
@@ -53,17 +63,17 @@ async function post(url: string, body: unknown | undefined, apiKey: string, fiel
 }
 
 export async function searchPlaces(query: string, from: GeoPoint | null, key: string, signal?: AbortSignal): Promise<PlaceCandidate[]> {
-  const center = from ? { latitude: from.latitude, longitude: from.longitude } : null;
+  const center = from && validPoint(from) ? { latitude: from.latitude, longitude: from.longitude } : null;
   const data = await post('https://places.googleapis.com/v1/places:searchText', {
     textQuery: query.trim(), pageSize: 5, languageCode: 'en',
-    ...(center ? { locationBias: { circle: { center, radius: 5_000 } } } : {}),
+    ...(center ? { rankPreference: 'DISTANCE', locationBias: { circle: { center, radius: 5_000 } } } : {}),
   }, key, 'places.id,places.displayName,places.location,places.formattedAddress', signal);
   const places: PlaceCandidate[] = (Array.isArray(data?.places) ? data.places : []).flatMap((p: any) =>
     p && typeof p.id === 'string' && p.id && typeof p.displayName?.text === 'string' && p.displayName.text.trim() && p.location && validPoint(p.location)
       ? [{ id: p.id, name: p.displayName.text, address: typeof p.formattedAddress === 'string' ? p.formattedAddress : '', point: p.location }]
       : []);
   if (!places.length) throw new Error('No matching places found. Try a name with a suburb or street.');
-  return places;
+  return center ? places.sort((a,b)=>distanceMeters(center,a.point)-distanceMeters(center,b.point)) : places;
 }
 
 /** Fresh details by ID. No durable provider-content cache and no automatic moved-place substitution. */
@@ -79,13 +89,46 @@ export async function placeDetails(id: string, key: string, signal?: AbortSignal
       : p.businessStatus === 'CLOSED_PERMANENTLY' ? 'This place is marked permanently closed. Choose another place.' : undefined };
 }
 
-export async function walkingRoute(from: GeoPoint, to: PlaceCandidate, key: string, signal?: AbortSignal): Promise<WalkingRoute> {
+export async function walkingRoute(from: GeoPoint, to: PlaceCandidate, key: string, signal?: AbortSignal,
+  options: { preference?: RoutePreference; allowStandardFallback?: boolean; via?: GeoPoint[] } = {}): Promise<WalkingRoute> {
+  if (!validPoint(from) || !validPoint(to.point)) throw new Error('Invalid route coordinates.');
+  const preference = options.preference ?? routePreference.value;
+  if (!supportsPreference(preference) && !options.allowStandardFallback) throw new Error(`${ROUTE_PREFERENCES.find(p => p.id === preference)?.label ?? 'This preference'} is unavailable with the current route provider. Choose Shortest distance or Shortest time to use a standard route.`);
+  if (options.via && (options.via.length > 20 || options.via.some(p => !validPoint(p)))) throw new Error('Invalid route waypoints.');
   const data = await post('https://routes.googleapis.com/directions/v2:computeRoutes', {
-    origin: { location: { latLng: { latitude: from.latitude, longitude: from.longitude } } }, destination: { placeId: to.id }, travelMode: 'WALK',
+    origin: { location: { latLng: { latitude: from.latitude, longitude: from.longitude } } },
+    destination: to.endpoint === 'coordinate' ? { location: { latLng: to.point } } : { placeId: to.id }, travelMode: 'WALK',
+    computeAlternativeRoutes: !options.via?.length,
+    ...(options.via?.length ? { intermediates: options.via.map(p => ({ location: { latLng: p } })) } : {}),
     polylineEncoding: 'ENCODED_POLYLINE', polylineQuality: 'HIGH_QUALITY', languageCode: 'en-AU', units: 'METRIC',
   }, key, 'routes.polyline.encodedPolyline,routes.distanceMeters,routes.duration,routes.warnings,' +
     'routes.legs.steps.navigationInstruction,routes.legs.steps.distanceMeters,routes.legs.steps.polyline.encodedPolyline', signal);
-  return parseWalkingRoute(data, to);
+  const candidates = parseWalkingRoutes(data, to);
+  candidates.sort((a, b) => preference === 'time' ? a.durationSeconds - b.durationSeconds : a.distanceMeters - b.distanceMeters);
+  const appliedPreference: RoutePreference | 'standard' = supportsPreference(preference) ? preference : 'standard';
+  const normalized = candidates.map(p => ({ ...p, requestedPreference: preference, appliedPreference }));
+  return { ...normalized[0], alternatives: normalized.slice(1) };
+}
+
+export async function searchNearbyPlaces(from: GeoPoint, radius: number, includedTypes: string[], key: string, signal?: AbortSignal): Promise<(PlaceCandidate & { types: string[] })[]> {
+  if (!validPoint(from) || ![30,50,100,150,200,250,300,400,500].includes(radius) || !includedTypes.length) throw new Error('Choose a nearby radius and categories.');
+  const data = await post('https://places.googleapis.com/v1/places:searchNearby', {
+    locationRestriction: { circle: { center: from, radius } }, includedTypes: [...new Set(includedTypes)].slice(0, 50),
+    maxResultCount: 20, rankPreference: 'DISTANCE', languageCode: 'en',
+  }, key, 'places.id,places.displayName,places.location,places.formattedAddress,places.types', signal);
+  return (Array.isArray(data?.places) ? data.places : []).flatMap((p: any) => p && typeof p.id === 'string' && p.id &&
+    typeof p.displayName?.text === 'string' && p.displayName.text.trim() && validPoint(p.location)
+    ? [{ id: p.id, name: p.displayName.text, address: typeof p.formattedAddress === 'string' ? p.formattedAddress : '', point: p.location, types: Array.isArray(p.types) ? p.types.filter((t: unknown) => typeof t === 'string') : [] }] : []);
+}
+
+export function parseWalkingRoutes(data: any, to: PlaceCandidate): WalkingRoute[] {
+  if (!Array.isArray(data?.routes) || !data.routes.length) throw new Error('No walking route found for that destination.');
+  // A malformed alternative must not discard a complete primary route.
+  const candidates: WalkingRoute[] = [];
+  let error: unknown;
+  for (const route of data.routes.slice(0, 10)) { try { candidates.push(parseWalkingRoute({ routes: [route] }, to)); } catch (e) { error = e; } }
+  if (!candidates.length) throw error ?? new Error('No complete walking route found.');
+  return candidates;
 }
 
 export function parseWalkingRoute(data: any, to: PlaceCandidate): WalkingRoute {
@@ -93,14 +136,18 @@ export function parseWalkingRoute(data: any, to: PlaceCandidate): WalkingRoute {
   if (!route) throw new Error('No walking route found for that destination.');
   const points = decodePolyline(route.polyline?.encodedPolyline);
   const steps: RouteStep[] = [];
+  let missingInstructions = false;
   for (const leg of Array.isArray(route.legs) ? route.legs : []) for (const step of Array.isArray(leg?.steps) ? leg.steps : []) {
     const geometry = decodePolyline(step.polyline?.encodedPolyline);
     const instruction = step.navigationInstruction?.instructions;
     // Reject incomplete geometry rather than joining unrelated points with a fabricated walkable line.
-    if (geometry.length < 2 || typeof instruction !== 'string' || !instruction.trim()) {
+    if (geometry.length < 2) {
       throw new Error('This route has incomplete walking instructions. Try another destination.');
     }
-    steps.push({ instruction: instruction.trim(), points: geometry,
+    const hasInstruction = typeof instruction === 'string' && !!instruction.trim();
+    if (!hasInstruction) missingInstructions = true;
+    const sectionDistance = Number.isFinite(step.distanceMeters) ? Math.max(0, step.distanceMeters) : pathLength(geometry);
+    steps.push({ instruction: hasInstruction ? instruction.trim() : `No written turn instruction supplied for this ${Math.round(sectionDistance)} metre section. Review the mapped path before proceeding.`, points: geometry,
       distanceMeters: Number.isFinite(step.distanceMeters) ? Math.max(0, step.distanceMeters) : pathLength(geometry),
       maneuver: step.navigationInstruction?.maneuver ?? 'MANEUVER_UNSPECIFIED' });
   }
@@ -110,7 +157,7 @@ export function parseWalkingRoute(data: any, to: PlaceCandidate): WalkingRoute {
   const duration = typeof route.duration === 'string' && /^\d+(?:\.\d+)?s$/.test(route.duration) ? Number.parseFloat(route.duration) : NaN;
   if (!Number.isFinite(duration) || duration < 0) throw new Error('Google returned an invalid route duration.');
   return { destination: to.name, destinationAddress: to.address, points, steps, distanceMeters: route.distanceMeters,
-    durationSeconds: duration, warnings: Array.isArray(route.warnings) ? route.warnings.filter((w: unknown) => typeof w === 'string') : [] };
+    durationSeconds: duration, warnings: [...(Array.isArray(route.warnings) ? route.warnings.filter((w: unknown) => typeof w === 'string') : []), ...(missingInstructions ? ['Some mapped sections have no written turn instructions from Google. Review these sections before starting; complete spoken directions are unavailable.'] : [])] };
 }
 
 /** Bounded decoder: malformed/truncated provider responses must not loop or invent coordinates. */
