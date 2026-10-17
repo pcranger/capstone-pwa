@@ -1,6 +1,6 @@
 # Six supplied Australian street images: unchanged model evaluation
 
-Run on 13 October 2026, in the isolated `codex/pedestrian-experiment` worktree. No weights, thresholds, postprocessing rules or application behaviour were changed for this evaluation. Nothing was merged, pushed or deployed.
+Run on 13 October 2026, in the isolated pedestrian-experiment branch. No weights, thresholds, postprocessing rules or application behaviour were changed for this evaluation. Nothing was merged, pushed or deployed.
 
 ## Raw pretrained model
 

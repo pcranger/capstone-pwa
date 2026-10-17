@@ -1,5 +1,5 @@
 {
-  "input": "C:\\Users\\HP\\AppData\\Local\\Temp\\codex-clipboard-0c178e14-86a7-409c-a091-faed0f7e2083.png",
+  "input": "tests/fixtures/pedestrian/vehicle-exclusion/08-arrow-vehicle.png",
   "input_sha256": "015ca54a4ee4cfa51e9ee0b238f3554dbe566baca38b2106876cb0f95a760657",
   "image_size": [
     300,

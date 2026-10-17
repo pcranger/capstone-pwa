@@ -10,7 +10,7 @@ Permission states are checked at launch instead of trusting a saved completion f
 
 The pre-redesign local baseline is preserved on dev; the new version is deployed to main. The dated verification sections below are historical. See [deployment record](DEV_DEPLOYMENT.md).
 
-Date: 13 October 2026. Full-version checkpoint: `5b92373`. Demo branch: `codex/demo-version`.
+Date: 13 October 2026. Full-version checkpoint: `5b92373`. Demo commit: `bb31c60`.
 
 ## Scope
 

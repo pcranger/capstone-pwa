@@ -1,6 +1,6 @@
 # CrossWise pedestrian experiment
 
-This folder is a separate Git worktree on `codex/pedestrian-experiment`. It contains the full focused demo plus the pedestrian experiment from commit `31de9ed`. The original `capstone-pwa` checkout uses `codex/demo-version` at the previous demo commit `bb31c60`. No changes have been merged into `main`, pushed or deployed by this experiment separation.
+This document records the pedestrian experiment added in commit `31de9ed` on top of the focused demo (`bb31c60`). It was developed on an isolated branch and merged into `main` in pull request #1.
 
 Run `npm ci`, then `npm run dev -- --port 8082`. The experiment has its own dependencies and build output. Open Help → Check a reference image for a still-image check, or Stroll for the camera. `npm run check` runs the complete validation suite. Production smoke: build, run the Node server on an unused port, then run `node scripts/smoke-pedestrian-deployment.mjs http://127.0.0.1:PORT`.
 
@@ -22,7 +22,7 @@ See `docs/PEDESTRIAN_DETECTION.md` for model provenance, licence and validation.
 
 ## Latest supplied image
 
-The exact attachment ending `84746c96-d4ef-42ae-b16e-ffc651adcc5c.png` was rerun through the ONNX model on 13 October 2026. The input was the full 1080×721 image, letterboxed to 640×640; no manually selected crop or shape fallback was used. It produced one `G_Signal` detection, score **0.723633**, original-image box approximately **(503,255)–(583,409)** around the pedestrian signal housing. The score is a model confidence, not measured accuracy or a calibrated probability that crossing is safe. The image is byte-identical to the previous street reference, so it is not a new independent test case.
+The image `tests/fixtures/pedestrian/street-green.png` was rerun through the ONNX model on 13 October 2026. The input was the full 1080×721 image, letterboxed to 640×640; no manually selected crop or shape fallback was used. It produced one `G_Signal` detection, score **0.723633**, original-image box approximately **(503,255)–(583,409)** around the pedestrian signal housing. The score is a model confidence, not measured accuracy or a calibrated probability that crossing is safe. The image is byte-identical to the previous street reference, so it is not a new independent test case.
 
 `artifacts/pedestrian/request-84746-raw-model.png` contains the annotated full image; the matching JSON preserves the exact image/model hashes, box, threshold and desktop inference samples. The five warmed single-thread native CPU samples had a median of about **171 ms** on this computer, excluding preprocessing and browser overhead. No inference about sustained phone performance follows from this timing.
 

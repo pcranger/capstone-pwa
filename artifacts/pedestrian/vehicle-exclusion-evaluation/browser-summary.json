@@ -327,7 +327,7 @@
   },
   {
     "id": "07-round-vehicle",
-    "input": "C:\\Users\\HP\\AppData\\Local\\Temp\\codex-clipboard-704084c8-5975-440b-8488-bd280cc65cbb.png",
+    "input": "tests/fixtures/pedestrian/vehicle-exclusion/07-round-vehicle.png",
     "input_sha256": "6d65afb629a022d2881eaea4ec3e4d58f51cf26ec16cc65f5fb9f463c84e32e0",
     "observations": [],
     "diagnostics": {
@@ -338,7 +338,7 @@
   },
   {
     "id": "08-arrow-vehicle",
-    "input": "C:\\Users\\HP\\AppData\\Local\\Temp\\codex-clipboard-0c178e14-86a7-409c-a091-faed0f7e2083.png",
+    "input": "tests/fixtures/pedestrian/vehicle-exclusion/08-arrow-vehicle.png",
     "input_sha256": "015ca54a4ee4cfa51e9ee0b238f3554dbe566baca38b2106876cb0f95a760657",
     "observations": [],
     "diagnostics": {

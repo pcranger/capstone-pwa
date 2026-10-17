@@ -1,6 +1,6 @@
 # Vehicle-light exclusion: implementation and repeated evaluation
 
-The changes are confined to the isolated `codex/pedestrian-experiment` branch. The YOLOv5s6 and COCO-SSD weights remain unchanged. There was no training, image crawling, threshold increase, manual crop or image-specific filename/coordinate rule. YOLO's original false positives still exist in its raw output; the new application verification stage rejects them before they become pedestrian observations.
+The changes are confined to the isolated pedestrian-experiment branch. The YOLOv5s6 and COCO-SSD weights remain unchanged. There was no training, image crawling, threshold increase, manual crop or image-specific filename/coordinate rule. YOLO's original false positives still exist in its raw output; the new application verification stage rejects them before they become pedestrian observations.
 
 ## Approaches considered
 

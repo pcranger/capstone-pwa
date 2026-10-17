@@ -1,5 +1,5 @@
 {
-  "input": "C:\\Users\\HP\\AppData\\Local\\Temp\\codex-clipboard-84746c96-d4ef-42ae-b16e-ffc651adcc5c.png",
+  "input": "tests/fixtures/pedestrian/street-green.png",
   "input_sha256": "6bc6befd4371c103deabdd293cd3c9bd3ec356f1bb7ebfc947deb1ac8f2c3aa6",
   "image_size": [
     1080,
